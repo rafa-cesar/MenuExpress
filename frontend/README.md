@@ -29,3 +29,14 @@ A finalização valida carrinho vazio, aceita observações do pedido e monta um
 Os contratos `Empresa`, `Categoria`, `Produto`, `Pedido` e `Cliente` ficam centralizados em `src/types/domain.ts`.
 
 A camada `src/services` isola o catálogo mockado e já expõe helpers para futura rota pública no formato `/:empresaSlug/cardapio`, mantendo a rota atual `/cardapio` compatível com o MVP.
+
+## Área administrativa
+
+Rotas mockadas disponíveis para o dono da lanchonete:
+
+- `/admin`: dashboard com indicadores do catálogo.
+- `/admin/produtos`: listagem, remoção e cadastro local de produtos.
+- `/admin/categorias`: listagem, remoção e cadastro local de categorias.
+- `/admin/configuracoes`: formulário visual de dados da empresa, WhatsApp, cor, taxa e pedido mínimo.
+
+A área administrativa usa layout próprio em `src/layouts/AdminLayout.tsx`, separado da navegação pública do cliente.

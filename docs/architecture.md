@@ -42,3 +42,9 @@ A estrutura está preparada para evoluir de `/cardapio` para rotas públicas por
 - `/pizzaria-italia/cardapio`
 
 Essa rota ainda não foi habilitada para manter compatibilidade com o MVP atual.
+
+## Separação entre área pública e administração
+
+A área pública permanece nas rotas `/` e `/cardapio`, com layout voltado ao cliente final. A área administrativa usa um layout próprio e rotas sob `/admin`, preparando o produto para o dono da lanchonete gerenciar catálogo, categorias e configurações sem misturar componentes públicos desnecessariamente.
+
+As telas administrativas ainda usam estado local e dados mockados, mantendo a aplicação sem backend, sem banco e sem autenticação nesta etapa.

@@ -1,6 +1,12 @@
 import { Link, Outlet } from '@tanstack/react-router';
 
 export function PublicLayout() {
+  const isAdminArea = window.location.pathname.startsWith('/admin');
+
+  if (isAdminArea) {
+    return <Outlet />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
