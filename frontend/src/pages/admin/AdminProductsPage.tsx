@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { demoCategorias, demoEmpresa, demoMenuItems, menuCategories } from '../../data/menu';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -29,13 +29,24 @@ export function AdminProductsPage() {
 
   const [products, setProducts] = useState<MenuItem[]>(demoMenuItems);
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  const submitLabel = useMemo(
+    () => (editingProductId ? 'Salvar alterações' : 'Cadastrar produto'),
+    [editingProductId],
+  );
+
+  function resetForm() {
+    setForm(emptyProductForm);
+    setEditingProductId(null);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const category = demoCategorias.find((item) => item.nome === form.categoria);
     const product: MenuItem = {
-      id: `produto-${Date.now()}`,
+      id: editingProductId ?? `produto-${Date.now()}`,
       empresaId: demoEmpresa.id,
       categoriaId: category?.id ?? 'categoria-1',
       nome: form.nome,
@@ -47,12 +58,38 @@ export function AdminProductsPage() {
       disponivel: form.ativo,
     };
 
-    setProducts((currentProducts) => [product, ...currentProducts]);
-    setForm(emptyProductForm);
+    if (editingProductId) {
+      setProducts((currentProducts) =>
+        currentProducts.map((currentProduct) =>
+          currentProduct.id === editingProductId ? product : currentProduct,
+        ),
+      );
+    } else {
+      setProducts((currentProducts) => [product, ...currentProducts]);
+    }
+
+    resetForm();
+  }
+
+  function handleEdit(product: MenuItem) {
+    setEditingProductId(product.id);
+    setForm({
+      nome: product.nome,
+      descricao: product.descricao,
+      preco: String(product.preco),
+      categoria: product.categoria,
+      imagem: product.imagem,
+      ativo: product.disponivel,
+      destaque: product.destaque,
+    });
   }
 
   function removeProduct(productId: string) {
     setProducts((currentProducts) => currentProducts.filter((product) => product.id !== productId));
+
+    if (editingProductId === productId) {
+      resetForm();
+    }
   }
 
   return (
@@ -86,7 +123,7 @@ export function AdminProductsPage() {
                   <p className="mt-1 text-sm text-slate-500">{product.categoria} · {product.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:border-brand-500 hover:text-brand-600">
+                  <button type="button" onClick={() => handleEdit(product)} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:border-brand-500 hover:text-brand-600">
                     Editar
                   </button>
                   <button type="button" onClick={() => removeProduct(product.id)} className="rounded-full bg-red-50 px-4 py-2 text-sm font-black text-red-600 hover:bg-red-100">
@@ -99,7 +136,14 @@ export function AdminProductsPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="h-fit rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-black text-slate-950">Novo produto</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-black text-slate-950">{editingProductId ? 'Editar produto' : 'Novo produto'}</h2>
+            {editingProductId ? (
+              <button type="button" onClick={resetForm} className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 hover:border-slate-300 hover:text-slate-900">
+                Cancelar edição
+              </button>
+            ) : null}
+          </div>
           <div className="mt-5 space-y-4">
             <label className="block text-sm font-bold text-slate-700">Nome
               <input required value={form.nome} onChange={(event) => setForm({ ...form, nome: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
@@ -128,7 +172,7 @@ export function AdminProductsPage() {
                 <input type="checkbox" checked={form.destaque} onChange={(event) => setForm({ ...form, destaque: event.target.checked })} /> Destaque
               </label>
             </div>
-            <button type="submit" className="w-full rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700">Cadastrar produto</button>
+            <button type="submit" className="w-full rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700">{submitLabel}</button>
           </div>
         </form>
       </div>
