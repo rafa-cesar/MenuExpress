@@ -31,10 +31,7 @@ export function AdminProductsPage() {
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
-  const submitLabel = useMemo(
-    () => (editingProductId ? 'Salvar alterações' : 'Cadastrar produto'),
-    [editingProductId],
-  );
+  const submitLabel = useMemo(() => (editingProductId ? 'Salvar alterações' : 'Cadastrar produto'), [editingProductId]);
 
   function resetForm() {
     setForm(emptyProductForm);
