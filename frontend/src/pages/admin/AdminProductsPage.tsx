@@ -3,6 +3,7 @@ import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { demoCategorias, demoEmpresa, demoMenuItems, menuCategories } from '../../data/menu';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { MenuCategory, MenuItem } from '../../types/menu';
+import { useMenuStore } from '../../context/MenuStoreContext';
 
 type ProductFormState = {
   nome: string;
@@ -27,31 +28,21 @@ const emptyProductForm: ProductFormState = {
 export function AdminProductsPage() {
   usePageTitle('Admin Produtos');
 
-  const [products, setProducts] = useState<MenuItem[]>(demoMenuItems);
+  const { produtos, setProdutos } = useMenuStore();
+
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Garante fallback para demoMenuItems caso store esteja vazia
+  useEffect(() => {
+    if (!produtos.length) {
+      setProdutos(demoMenuItems);
+    }
+  }, [produtos.length, setProdutos]);
+
   const submitLabel = useMemo(() => (editingProductId ? 'Salvar alterações' : 'Cadastrar produto'), [editingProductId]);
   const modalTitle = editingProductId ? 'Editar produto' : 'Novo produto';
-
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeModal();
-      }
-    }
-
-    if (isModalOpen) {
-      window.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
-    };
-  }, [isModalOpen]);
 
   function resetForm() {
     setForm(emptyProductForm);
@@ -86,13 +77,13 @@ export function AdminProductsPage() {
     };
 
     if (editingProductId) {
-      setProducts((currentProducts) =>
+      setProdutos((currentProducts) =>
         currentProducts.map((currentProduct) =>
           currentProduct.id === editingProductId ? product : currentProduct,
         ),
       );
     } else {
-      setProducts((currentProducts) => [product, ...currentProducts]);
+      setProdutos((currentProducts) => [product, ...currentProducts]);
     }
 
     closeModal();
@@ -113,7 +104,7 @@ export function AdminProductsPage() {
   }
 
   function removeProduct(productId: string) {
-    setProducts((currentProducts) => currentProducts.filter((product) => product.id !== productId));
+    setProdutos((currentProducts) => currentProducts.filter((product) => product.id !== productId));
 
     if (editingProductId === productId) {
       closeModal();
@@ -142,11 +133,11 @@ export function AdminProductsPage() {
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-5">
             <h2 className="text-xl font-black text-slate-950">Produtos cadastrados</h2>
-            <p className="mt-1 text-sm text-slate-500">Estado local do frontend nesta etapa.</p>
+            <p className="mt-1 text-sm text-slate-500">Dados compartilhados com o cardápio público nesta etapa.</p>
           </div>
 
           <div className="divide-y divide-slate-100">
-            {products.map((product) => (
+            {produtos.map((product) => (
               <article key={product.id} className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
