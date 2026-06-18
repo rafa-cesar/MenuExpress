@@ -108,51 +108,79 @@ export function AdminSettingsPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-xl font-black text-slate-950">Funcionamento</h2>
-          <p className="mt-2 text-sm text-slate-500">Controle se a loja segue o horário automaticamente ou se deve ser aberta/fechada manualmente.</p>
-
-          <div className="mt-5 rounded-3xl bg-slate-50 p-4">
-            <p className="text-sm font-black text-slate-950">Abrir ou fechar manualmente</p>
-            <p className="mt-1 text-sm text-slate-500">Use estes botões para deixar claro no cardápio se a loja pode receber pedidos agora.</p>
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              {[
-                { value: 'automatico', label: 'Automático pelo horário', description: 'Segue a agenda semanal' },
-                { value: 'aberto', label: 'Abrir agora', description: 'Força loja aberta' },
-                { value: 'fechado', label: 'Fechar agora', description: 'Bloqueia pedidos' },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setForm({ ...form, statusManual: option.value as StatusManualFuncionamento })}
-                  className={`rounded-2xl border p-4 text-left transition ${form.statusManual === option.value ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-brand-300'}`}
-                >
-                  <span className="block text-sm font-black">{option.label}</span>
-                  <span className="mt-1 block text-xs font-bold text-slate-500">{option.description}</span>
-                </button>
-              ))}
+        <div className="rounded-3xl border-2 border-brand-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-brand-600">Seção: Funcionamento</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">Horário de funcionamento</h2>
+              <p className="mt-2 text-sm text-slate-500">
+                Defina se a loja deve seguir a agenda automaticamente ou se deve ficar aberta/fechada manualmente.
+              </p>
             </div>
+            <span className={`w-fit rounded-full px-4 py-2 text-sm font-black ${form.statusManual === 'fechado' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              Status atual: {form.statusManual === 'automatico' ? 'Automático' : form.statusManual === 'aberto' ? 'Forçar aberto' : 'Forçar fechado'}
+            </span>
           </div>
 
-          <label className="mt-5 block text-sm font-bold text-slate-700">Mensagem para clientes no cardápio
-            <textarea value={form.mensagemCliente} onChange={(event) => setForm({ ...form, mensagemCliente: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+          <fieldset className="mt-6 rounded-3xl bg-slate-50 p-4">
+            <legend className="text-base font-black text-slate-950">Status da loja:</legend>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                { value: 'automatico', label: 'Automático', description: 'Usa os horários abaixo' },
+                { value: 'aberto', label: 'Forçar aberto', description: 'Permite pedidos agora' },
+                { value: 'fechado', label: 'Forçar fechado', description: 'Bloqueia pedidos agora' },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${form.statusManual === option.value ? 'border-brand-500 bg-white text-brand-700 shadow-sm ring-4 ring-brand-100' : 'border-slate-200 bg-white text-slate-700 hover:border-brand-300'}`}
+                >
+                  <input
+                    type="radio"
+                    name="statusManual"
+                    value={option.value}
+                    checked={form.statusManual === option.value}
+                    onChange={() => setForm({ ...form, statusManual: option.value as StatusManualFuncionamento })}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block text-sm font-black">{option.label}</span>
+                    <span className="mt-1 block text-xs font-bold text-slate-500">{option.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <label className="mt-6 block text-base font-black text-slate-950">Mensagem para clientes:
+            <textarea
+              value={form.mensagemCliente}
+              onChange={(event) => setForm({ ...form, mensagemCliente: event.target.value })}
+              rows={4}
+              placeholder="Ex.: Estamos atendendo normalmente. Pedidos pelo WhatsApp até 23h."
+              className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none focus:border-brand-500 focus:bg-white"
+            />
           </label>
 
-          <div className="mt-5 space-y-3">
-            {form.horarioFuncionamento.map((schedule, index) => (
-              <div key={schedule.dia} className="grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-[1fr_120px_120px_120px] sm:items-center">
-                <p className="font-black text-slate-950">{dayLabels[schedule.dia]}</p>
-                <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                  <input type="checkbox" checked={schedule.ativo} onChange={(event) => updateSchedule(index, { ...schedule, ativo: event.target.checked })} /> Ativo
-                </label>
-                <label className="text-sm font-bold text-slate-700">Abertura
-                  <input type="time" value={schedule.abertura} onChange={(event) => updateSchedule(index, { ...schedule, abertura: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
-                </label>
-                <label className="text-sm font-bold text-slate-700">Fechamento
-                  <input type="time" value={schedule.fechamento} onChange={(event) => updateSchedule(index, { ...schedule, fechamento: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
-                </label>
-              </div>
-            ))}
+          <div className="mt-6">
+            <h3 className="text-base font-black text-slate-950">Horário de funcionamento:</h3>
+            <p className="mt-1 text-sm text-slate-500">Configure cada dia com ativo, abertura e fechamento.</p>
+
+            <div className="mt-4 space-y-3">
+              {form.horarioFuncionamento.map((schedule, index) => (
+                <div key={schedule.dia} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[120px_120px_1fr_1fr] sm:items-center">
+                  <p className="font-black text-slate-950">{dayLabels[schedule.dia]}:</p>
+                  <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                    <input type="checkbox" checked={schedule.ativo} onChange={(event) => updateSchedule(index, { ...schedule, ativo: event.target.checked })} /> Ativo
+                  </label>
+                  <label className="text-sm font-bold text-slate-700">Abertura
+                    <input type="time" value={schedule.abertura} onChange={(event) => updateSchedule(index, { ...schedule, abertura: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2" />
+                  </label>
+                  <label className="text-sm font-bold text-slate-700">Fechamento
+                    <input type="time" value={schedule.fechamento} onChange={(event) => updateSchedule(index, { ...schedule, fechamento: event.target.value })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2" />
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

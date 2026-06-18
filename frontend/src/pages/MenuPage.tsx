@@ -187,7 +187,7 @@ export function MenuPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className={`text-lg font-black ${storeStatus.isOpen ? 'text-emerald-700' : 'text-red-700'}`}>
-                {storeStatus.isOpen ? 'Loja aberta agora' : 'Loja fechada no momento'}
+                {storeStatus.isOpen ? 'Loja aberta' : 'Loja fechada'}
               </p>
               <p className="mt-1 text-sm font-bold text-slate-700">Horário de hoje: {storeStatus.todayScheduleLabel}</p>
               <p className="mt-2 text-sm text-slate-600">{empresa.mensagemCliente}</p>
