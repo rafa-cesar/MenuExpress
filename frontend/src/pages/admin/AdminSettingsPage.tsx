@@ -81,33 +81,6 @@ export function AdminSettingsPage() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="text-xl font-black text-slate-950">Dados da lanchonete</h2>
-          <div className="mt-5 grid gap-5 lg:grid-cols-2">
-            <label className="block text-sm font-bold text-slate-700">Nome da empresa
-              <input value={form.nomeEmpresa} onChange={(event) => setForm({ ...form, nomeEmpresa: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <label className="block text-sm font-bold text-slate-700">Cidade/UF
-              <input value={form.cidadeUf} onChange={(event) => setForm({ ...form, cidadeUf: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <label className="block text-sm font-bold text-slate-700 lg:col-span-2">Descrição
-              <textarea value={form.descricao} onChange={(event) => setForm({ ...form, descricao: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <label className="block text-sm font-bold text-slate-700">Telefone WhatsApp
-              <input value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <label className="block text-sm font-bold text-slate-700">Cor principal
-              <input type="color" value={form.corPrincipal} onChange={(event) => setForm({ ...form, corPrincipal: event.target.value })} className="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-3 py-2 outline-none focus:border-brand-500" />
-            </label>
-            <label className="block text-sm font-bold text-slate-700">Taxa de entrega padrão
-              <input type="number" min="0" step="0.01" value={form.taxaEntrega} onChange={(event) => setForm({ ...form, taxaEntrega: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <label className="block text-sm font-bold text-slate-700">Pedido mínimo
-              <input type="number" min="0" step="0.01" value={form.pedidoMinimo} onChange={(event) => setForm({ ...form, pedidoMinimo: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-          </div>
-        </div>
-
         <div className="rounded-3xl border-2 border-brand-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -183,6 +156,35 @@ export function AdminSettingsPage() {
             </div>
           </div>
         </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="text-xl font-black text-slate-950">Dados da lanchonete</h2>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <label className="block text-sm font-bold text-slate-700">Nome da empresa
+              <input value={form.nomeEmpresa} onChange={(event) => setForm({ ...form, nomeEmpresa: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+            </label>
+            <label className="block text-sm font-bold text-slate-700">Cidade/UF
+              <input value={form.cidadeUf} onChange={(event) => setForm({ ...form, cidadeUf: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+            </label>
+            <label className="block text-sm font-bold text-slate-700 lg:col-span-2">Descrição
+              <textarea value={form.descricao} onChange={(event) => setForm({ ...form, descricao: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+            </label>
+            <label className="block text-sm font-bold text-slate-700">Telefone WhatsApp
+              <input value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+            </label>
+            <label className="block text-sm font-bold text-slate-700">Cor principal
+              <input type="color" value={form.corPrincipal} onChange={(event) => setForm({ ...form, corPrincipal: event.target.value })} className="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-3 py-2 outline-none focus:border-brand-500" />
+            </label>
+            <label className="block text-sm font-bold text-slate-700">Taxa de entrega padrão
+              <input type="number" min="0" step="0.01" value={form.taxaEntrega} onChange={(event) => setForm({ ...form, taxaEntrega: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+            </label>
+            <label className="block text-sm font-bold text-slate-700">Pedido mínimo
+              <input type="number" min="0" step="0.01" value={form.pedidoMinimo} onChange={(event) => setForm({ ...form, pedidoMinimo: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+            </label>
+          </div>
+        </div>
+
+
 
         {savedMessage ? (
           <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700" role="status">{savedMessage}</p>

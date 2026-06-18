@@ -8,10 +8,10 @@ type NavigationItem = {
 
 const navigationItems: NavigationItem[] = [
   { to: '/admin', label: 'Dashboard', exact: true },
-  { to: '/admin/produtos', label: 'Produtos' },
-  { to: '/admin/categorias', label: 'Categorias' },
-  { to: '/admin/configuracoes', label: 'Configurações' },
-  { to: '/cardapio', label: 'Ver cardápio' },
+  { to: '/admin/produtos', label: 'Produtos', exact: true },
+  { to: '/admin/categorias', label: 'Categorias', exact: true },
+  { to: '/admin/configuracoes', label: 'Configurações', exact: true },
+  { to: '/cardapio', label: 'Ver cardápio', exact: true },
 ];
 
 const desktopLinkClass = 'block rounded-2xl px-4 py-3 text-sm font-bold text-slate-200 transition hover:bg-white/10 hover:text-white';
