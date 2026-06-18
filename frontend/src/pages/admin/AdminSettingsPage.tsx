@@ -1,6 +1,7 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { useMenuStore } from '../../context/MenuStoreContext';
 
 type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
@@ -56,12 +57,15 @@ const statusLojaLabels: Record<StatusLoja, string> = {
 
 export function AdminSettingsPage() {
   usePageTitle('Admin Configurações');
+
+  const { empresa, setEmpresa } = useMenuStore();
+
   const [savedMessage, setSavedMessage] = useState('');
   const [form, setForm] = useState<SettingsFormState>({
-    nomeEmpresa: 'Burger House Express',
-    descricao: 'Hambúrgueres artesanais, combos completos e adicionais para montar seu pedido pelo WhatsApp.',
-    cidadeUf: 'São Paulo, SP',
-    whatsapp: '5511999999999',
+    nomeEmpresa: empresa.nome,
+    descricao: empresa.descricao,
+    cidadeUf: empresa.cidade,
+    whatsapp: empresa.whatsapp,
     corPrincipal: '#f97316',
     taxaEntrega: '7.00',
     pedidoMinimo: '25.00',
@@ -69,6 +73,16 @@ export function AdminSettingsPage() {
     mensagemCliente: '',
     dias: diasPadrao,
   });
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      nomeEmpresa: empresa.nome,
+      descricao: empresa.descricao,
+      cidadeUf: empresa.cidade,
+      whatsapp: empresa.whatsapp,
+    }));
+  }, [empresa]);
 
   function updateDay(day: DiaSemanaKey, field: keyof HorarioDia, value: boolean | string) {
     setForm((current) => ({
@@ -82,8 +96,16 @@ export function AdminSettingsPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Aqui futuramente: persistir no Supabase / useMenuExpressStore
-    setSavedMessage('Configurações salvas com sucesso.');
+
+    setEmpresa({
+      ...empresa,
+      nome: form.nomeEmpresa,
+      descricao: form.descricao,
+      cidade: form.cidadeUf,
+      whatsapp: form.whatsapp,
+    });
+
+    setSavedMessage('Configurações salvas com sucesso. O cardápio público será atualizado imediatamente.');
     setTimeout(() => setSavedMessage(''), 4000);
   }
 
@@ -199,7 +221,6 @@ export function AdminSettingsPage() {
             </label>
           </div>
 
-          {/* Status visual */}
           <div className={`mt-5 rounded-2xl px-4 py-3 text-sm font-bold ${
             form.statusLoja === 'forcar_aberto'
               ? 'bg-emerald-50 text-emerald-700'
@@ -212,7 +233,6 @@ export function AdminSettingsPage() {
             {form.statusLoja === 'automatico' && '🕐 Loja abre e fecha automaticamente conforme os horários abaixo'}
           </div>
 
-          {/* Horários por dia */}
           <div className="mt-6 space-y-3">
             {diasSemana.map((dia) => (
               <div

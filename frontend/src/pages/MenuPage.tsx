@@ -14,9 +14,9 @@ export function MenuPage() {
   usePageTitle('Cardápio');
 
   const menuCatalog = menuCatalogService.getDemoCatalog();
-  const { categoriasNomes: menuCategories, restaurant: demoRestaurant } = menuCatalog;
+  const { categoriasNomes: menuCategories } = menuCatalog;
 
-  const { produtos } = useMenuStore();
+  const { empresa, produtos } = useMenuStore();
 
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory>('Promoções');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -117,7 +117,7 @@ export function MenuPage() {
     }
 
     setCheckoutMessage('');
-    const whatsappUrl = buildWhatsAppOrderUrl(demoRestaurant.whatsapp, buildCheckoutMessage());
+    const whatsappUrl = buildWhatsAppOrderUrl(empresa.whatsapp, buildCheckoutMessage());
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   }
 
@@ -128,9 +128,9 @@ export function MenuPage() {
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.25em] text-brand-100">Cardápio digital</p>
-              <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">{demoRestaurant.name}</h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">{demoRestaurant.description}</p>
-              <p className="mt-4 text-sm font-semibold text-slate-300">📍 {demoRestaurant.city}</p>
+              <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">{empresa.nome}</h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">{empresa.descricao}</p>
+              <p className="mt-4 text-sm font-semibold text-slate-300">📍 {empresa.cidade}</p>
             </div>
             <div className="rounded-[1.5rem] bg-white/10 p-5 backdrop-blur">
               <p className="text-sm font-semibold text-slate-200">Seu pedido agora</p>
