@@ -22,9 +22,8 @@ export function MenuPage() {
 
   const filteredItems = useMemo(
     () => demoMenuItems.filter((item) => item.categoria === selectedCategory),
-    [selectedCategory],
+    [demoMenuItems, selectedCategory],
   );
-
   const subtotal = useMemo(
     () => cartItems.reduce((total, item) => total + item.product.preco * item.quantity, 0),
     [cartItems],
