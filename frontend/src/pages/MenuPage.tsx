@@ -3,6 +3,7 @@ import { MenuCard } from '../components/MenuCard';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { buildWhatsAppOrderUrl, menuCatalogService } from '../services';
 import type { CartItem, MenuCategory, MenuItem } from '../types/menu';
+import { useMenuStore } from '../context/MenuStoreContext';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -13,7 +14,9 @@ export function MenuPage() {
   usePageTitle('Cardápio');
 
   const menuCatalog = menuCatalogService.getDemoCatalog();
-  const { categoriasNomes: menuCategories, produtos: demoMenuItems, restaurant: demoRestaurant } = menuCatalog;
+  const { categoriasNomes: menuCategories, restaurant: demoRestaurant } = menuCatalog;
+
+  const { produtos } = useMenuStore();
 
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory>('Promoções');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -21,8 +24,8 @@ export function MenuPage() {
   const [checkoutMessage, setCheckoutMessage] = useState('');
 
   const filteredItems = useMemo(
-    () => demoMenuItems.filter((item) => item.categoria === selectedCategory),
-    [selectedCategory],
+    () => produtos.filter((item) => item.categoria === selectedCategory),
+    [produtos, selectedCategory],
   );
 
   const subtotal = useMemo(
@@ -225,6 +228,8 @@ export function MenuPage() {
   );
 }
 
+// CartSummary igual ao original
+
 type CartSummaryProps = {
   cartItems: CartItem[];
   subtotal: number;
@@ -282,17 +287,25 @@ function CartSummary({
                     Remover
                   </button>
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="flex items-center rounded-full bg-slate-100 p-1">
-                    <button type="button" onClick={() => onDecrement(item.product.id)} className="size-8 rounded-full bg-white font-black">
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2 py-1">
+                    <button
+                      type="button"
+                      onClick={() => onDecrement(item.product.id)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-black text-slate-700"
+                    >
                       −
                     </button>
-                    <span className="w-8 text-center text-sm font-black">{item.quantity}</span>
-                    <button type="button" onClick={() => onIncrement(item.product.id)} className="size-8 rounded-full bg-slate-950 font-black text-white">
+                    <span className="w-6 text-center text-sm font-bold text-slate-900">{item.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => onIncrement(item.product.id)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-sm font-black text-white"
+                    >
                       +
                     </button>
                   </div>
-                  <p className="font-black text-slate-950">
+                  <p className="text-sm font-bold text-slate-900">
                     {currencyFormatter.format(item.product.preco * item.quantity)}
                   </p>
                 </div>
@@ -300,46 +313,44 @@ function CartSummary({
             ))
           )}
         </div>
-      ) : null}
-
-      <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
-        <div className="flex justify-between text-sm text-slate-600">
-          <span>Subtotal</span>
-          <span>{currencyFormatter.format(subtotal)}</span>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500">Itens</span>
+            <span className="font-bold text-slate-900">{cartItems.length}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-500">Subtotal</span>
+            <span className="font-bold text-slate-900">{currencyFormatter.format(subtotal)}</span>
+          </div>
         </div>
-        <div className="flex justify-between text-base font-black text-slate-950">
-          <span>Total geral</span>
-          <span>{currencyFormatter.format(subtotal)}</span>
-        </div>
+      )}
+
+      <div className="mt-5 space-y-3">
+        {!compact ? (
+          <label className="block text-sm font-bold text-slate-700">
+            Observação do pedido
+            <textarea
+              value={orderNote}
+              onChange={(event) => onOrderNoteChange(event.target.value)}
+              placeholder="Ex: Tirar a cebola, maionese à parte, ponto da carne..."
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-500"
+            />
+          </label>
+        ) : null}
+
+        {checkoutMessage ? (
+          <p className="rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{checkoutMessage}</p>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={onCheckout}
+          className="w-full rounded-full bg-brand-600 px-5 py-3 text-sm font-black text-white hover:bg-brand-700"
+        >
+          Finalizar Pedido no WhatsApp
+        </button>
       </div>
-
-      <div className="mt-4">
-        <label htmlFor={compact ? 'order-note-mobile' : 'order-note-desktop'} className="text-sm font-black text-slate-950">
-          Observação do pedido
-        </label>
-        <textarea
-          id={compact ? 'order-note-mobile' : 'order-note-desktop'}
-          value={orderNote}
-          onChange={(event) => onOrderNoteChange(event.target.value)}
-          rows={compact ? 2 : 4}
-          placeholder="Ex.: sem cebola, ponto da carne, retirar molho..."
-          className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
-        />
-      </div>
-
-      {checkoutMessage ? (
-        <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600" role="alert">
-          {checkoutMessage}
-        </p>
-      ) : null}
-
-      <button
-        type="button"
-        onClick={onCheckout}
-        className="mt-4 w-full rounded-full bg-brand-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-orange-200 hover:bg-brand-700"
-      >
-        Finalizar Pedido
-      </button>
     </div>
   );
 }
