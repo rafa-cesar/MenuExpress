@@ -1,7 +1,7 @@
 import { Link, Outlet } from '@tanstack/react-router';
 
 const navigationItems = [
-  { to: '/admin', label: 'Dashboard' },
+  { to: '/admin', label: 'Dashboard', exact: true },
   { to: '/admin/produtos', label: 'Produtos' },
   { to: '/admin/categorias', label: 'Categorias' },
   { to: '/admin/configuracoes', label: 'Configurações' },
@@ -21,6 +21,7 @@ export function AdminLayout() {
             <Link
               key={item.to}
               to={item.to}
+              activeOptions={item.exact ? { exact: true } : undefined}
               className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-200 transition hover:bg-white/10 hover:text-white"
               activeProps={{ className: 'block rounded-2xl bg-brand-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-950/20' }}
             >
@@ -57,6 +58,7 @@ export function AdminLayout() {
           <Link
             key={item.to}
             to={item.to}
+            activeOptions={item.exact ? { exact: true } : undefined}
             className="rounded-2xl px-2 py-3 text-center text-xs font-black text-slate-500"
             activeProps={{ className: 'rounded-2xl bg-brand-100 px-2 py-3 text-center text-xs font-black text-brand-700' }}
           >
