@@ -10,6 +10,9 @@ export const demoEmpresa: Empresa = {
   status: 'ativa',
   statusManual: 'automatico',
   mensagemCliente: 'Pedidos pelo WhatsApp de terça a domingo. Confira os horários antes de finalizar.',
+  corPrincipal: '#f97316',
+  taxaEntrega: 7,
+  pedidoMinimo: 25,
   horarioFuncionamento: [
     { dia: 'segunda', ativo: true, abertura: '18:00', fechamento: '23:00' },
     { dia: 'terca', ativo: true, abertura: '18:00', fechamento: '23:00' },

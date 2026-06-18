@@ -21,6 +21,9 @@ export interface Empresa {
   horarioFuncionamento: HorarioFuncionamento[];
   statusManual: StatusManualFuncionamento;
   mensagemCliente: string;
+  corPrincipal: string;
+  taxaEntrega: number;
+  pedidoMinimo: number;
 }
 
 export interface Categoria {

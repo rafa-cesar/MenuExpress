@@ -1,24 +1,26 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
-import { demoCategorias, demoEmpresa, demoMenuItems, menuCategories } from '../../data/menu';
+import { useMenuExpressStore } from '../../hooks/useMenuExpressStore';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { MenuCategory, MenuItem } from '../../types/menu';
+import type { Produto } from '../../types/domain';
 
 type ProductFormState = {
   nome: string;
   descricao: string;
   preco: string;
-  categoria: MenuCategory;
+  categoriaId: string;
   imagem: string;
   ativo: boolean;
   destaque: boolean;
 };
 
+const defaultImage = 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=900&q=80';
+
 const emptyProductForm: ProductFormState = {
   nome: '',
   descricao: '',
   preco: '',
-  categoria: 'Hambúrgueres',
+  categoriaId: '',
   imagem: '',
   ativo: true,
   destaque: false,
@@ -27,32 +29,59 @@ const emptyProductForm: ProductFormState = {
 export function AdminProductsPage() {
   usePageTitle('Admin Produtos');
 
-  const [products, setProducts] = useState<MenuItem[]>(demoMenuItems);
+  const { categorias, empresa, produtos, removeProduto, upsertProduto } = useMenuExpressStore();
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  const availableCategories = useMemo(
+    () => categorias.filter((category) => category.ativa),
+    [categorias],
+  );
+
+  const selectedCategoryId = form.categoriaId || availableCategories[0]?.id || categorias[0]?.id || '';
+
+  function resetForm() {
+    setForm(emptyProductForm);
+    setEditingProductId(null);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const category = demoCategorias.find((item) => item.nome === form.categoria);
-    const product: MenuItem = {
-      id: `produto-${Date.now()}`,
-      empresaId: demoEmpresa.id,
-      categoriaId: category?.id ?? 'categoria-1',
+    const category = categorias.find((item) => item.id === selectedCategoryId);
+
+    if (!category) {
+      return;
+    }
+
+    const product: Produto = {
+      id: editingProductId ?? `produto-${Date.now()}`,
+      empresaId: empresa.id,
+      categoriaId: category.id,
       nome: form.nome,
       descricao: form.descricao,
       preco: Number(form.preco),
-      categoria: form.categoria,
-      imagem: form.imagem || 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=900&q=80',
+      categoria: category.nome,
+      imagem: form.imagem || defaultImage,
       destaque: form.destaque,
       disponivel: form.ativo,
     };
 
-    setProducts((currentProducts) => [product, ...currentProducts]);
-    setForm(emptyProductForm);
+    upsertProduto(product);
+    resetForm();
   }
 
-  function removeProduct(productId: string) {
-    setProducts((currentProducts) => currentProducts.filter((product) => product.id !== productId));
+  function editProduct(product: Produto) {
+    setEditingProductId(product.id);
+    setForm({
+      nome: product.nome,
+      descricao: product.descricao,
+      preco: String(product.preco),
+      categoriaId: product.categoriaId,
+      imagem: product.imagem,
+      ativo: product.disponivel,
+      destaque: product.destaque,
+    });
   }
 
   return (
@@ -60,18 +89,18 @@ export function AdminProductsPage() {
       <AdminSectionHeader
         eyebrow="Catálogo"
         title="Produtos"
-        description="Cadastre produtos, destaque promoções e mantenha a listagem pronta para futura persistência no Supabase."
+        description="Cadastre, edite e remova produtos usando a camada central local que alimenta o cardápio público."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-5">
             <h2 className="text-xl font-black text-slate-950">Produtos cadastrados</h2>
-            <p className="mt-1 text-sm text-slate-500">Estado local do frontend nesta etapa.</p>
+            <p className="mt-1 text-sm text-slate-500">Produtos salvos no localStorage e exibidos no cardápio público quando ativos.</p>
           </div>
 
           <div className="divide-y divide-slate-100">
-            {products.map((product) => (
+            {produtos.map((product) => (
               <article key={product.id} className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -86,10 +115,10 @@ export function AdminProductsPage() {
                   <p className="mt-1 text-sm text-slate-500">{product.categoria} · {product.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:border-brand-500 hover:text-brand-600">
+                  <button type="button" onClick={() => editProduct(product)} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:border-brand-500 hover:text-brand-600">
                     Editar
                   </button>
-                  <button type="button" onClick={() => removeProduct(product.id)} className="rounded-full bg-red-50 px-4 py-2 text-sm font-black text-red-600 hover:bg-red-100">
+                  <button type="button" onClick={() => removeProduto(product.id)} className="rounded-full bg-red-50 px-4 py-2 text-sm font-black text-red-600 hover:bg-red-100">
                     Remover
                   </button>
                 </div>
@@ -99,7 +128,7 @@ export function AdminProductsPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="h-fit rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-black text-slate-950">Novo produto</h2>
+          <h2 className="text-xl font-black text-slate-950">{editingProductId ? 'Editar produto' : 'Novo produto'}</h2>
           <div className="mt-5 space-y-4">
             <label className="block text-sm font-bold text-slate-700">Nome
               <input required value={form.nome} onChange={(event) => setForm({ ...form, nome: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
@@ -112,8 +141,8 @@ export function AdminProductsPage() {
                 <input required type="number" min="0" step="0.01" value={form.preco} onChange={(event) => setForm({ ...form, preco: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
               </label>
               <label className="block text-sm font-bold text-slate-700">Categoria
-                <select value={form.categoria} onChange={(event) => setForm({ ...form, categoria: event.target.value as MenuCategory })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
-                  {menuCategories.map((category) => <option key={category}>{category}</option>)}
+                <select required value={selectedCategoryId} onChange={(event) => setForm({ ...form, categoriaId: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                  {categorias.map((category) => <option key={category.id} value={category.id}>{category.nome}{category.ativa ? '' : ' (inativa)'}</option>)}
                 </select>
               </label>
             </div>
@@ -128,7 +157,16 @@ export function AdminProductsPage() {
                 <input type="checkbox" checked={form.destaque} onChange={(event) => setForm({ ...form, destaque: event.target.checked })} /> Destaque
               </label>
             </div>
-            <button type="submit" className="w-full rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700">Cadastrar produto</button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button type="submit" className="flex-1 rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700">
+                {editingProductId ? 'Salvar alterações' : 'Cadastrar produto'}
+              </button>
+              {editingProductId ? (
+                <button type="button" onClick={resetForm} className="rounded-full border border-slate-200 px-5 py-3 font-black text-slate-700 hover:border-brand-500 hover:text-brand-600">
+                  Cancelar
+                </button>
+              ) : null}
+            </div>
           </div>
         </form>
       </div>

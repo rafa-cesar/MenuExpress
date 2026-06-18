@@ -2,9 +2,7 @@ import type { Categoria, Empresa, Produto } from './domain';
 
 export type MenuCategory = 'Promoções' | 'Hambúrgueres' | 'Combos' | 'Bebidas' | 'Adicionais';
 
-export type MenuItem = Produto & {
-  categoria: MenuCategory;
-};
+export type MenuItem = Produto;
 
 export type CartItem = {
   product: MenuItem;
@@ -24,7 +22,7 @@ export type MenuCatalog = {
   empresa: Empresa;
   restaurant: Restaurant;
   categorias: Categoria[];
-  categoriasNomes: MenuCategory[];
+  categoriasNomes: string[];
   produtos: MenuItem[];
 };
 

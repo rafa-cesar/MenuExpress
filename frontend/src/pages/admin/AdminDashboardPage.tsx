@@ -1,20 +1,19 @@
 import { Link } from '@tanstack/react-router';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { AdminStatCard } from '../../components/admin/AdminStatCard';
-import { demoCategorias, demoMenuItems } from '../../data/menu';
 import { buildTenantMenuPath } from '../../services';
-import { useEmpresaConfig } from '../../hooks/useEmpresaConfig';
+import { useMenuExpressStore } from '../../hooks/useMenuExpressStore';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { getStoreOpenStatus } from '../../utils/openingHours';
 
 export function AdminDashboardPage() {
   usePageTitle('Admin');
 
-  const { empresa } = useEmpresaConfig();
+  const { categorias, empresa, produtos } = useMenuExpressStore();
   const storeStatus = getStoreOpenStatus(empresa);
-  const totalProducts = demoMenuItems.length;
-  const activeCategories = demoCategorias.filter((category) => category.ativa).length;
-  const featuredProducts = demoMenuItems.filter((product) => product.destaque).length;
+  const totalProducts = produtos.length;
+  const activeCategories = categorias.filter((category) => category.ativa).length;
+  const featuredProducts = produtos.filter((product) => product.destaque).length;
   const publicMenuPath = buildTenantMenuPath(empresa.slug);
 
   return (
@@ -34,7 +33,7 @@ export function AdminDashboardPage() {
             Abrir/fechar loja
           </Link>
         </article>
-        <AdminStatCard title="Total de produtos" value={totalProducts} description="Produtos cadastrados no catálogo mockado." />
+        <AdminStatCard title="Total de produtos" value={totalProducts} description="Produtos cadastrados na camada local central." />
         <AdminStatCard title="Categorias ativas" value={activeCategories} description="Categorias visíveis no cardápio público." />
         <AdminStatCard title="Produtos em destaque" value={featuredProducts} description="Itens destacados como promocionais." />
         <article className="rounded-3xl border border-brand-200 bg-brand-50 p-5 shadow-sm">

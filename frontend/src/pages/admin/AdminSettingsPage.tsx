@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
-import { useEmpresaConfig } from '../../hooks/useEmpresaConfig';
+import { useMenuExpressStore } from '../../hooks/useMenuExpressStore';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { HorarioFuncionamento, StatusManualFuncionamento } from '../../types/domain';
 
@@ -30,16 +30,16 @@ const dayLabels: Record<HorarioFuncionamento['dia'], string> = {
 export function AdminSettingsPage() {
   usePageTitle('Admin Configurações');
 
-  const { empresa, setEmpresa } = useEmpresaConfig();
+  const { empresa, setEmpresa } = useMenuExpressStore();
   const [savedMessage, setSavedMessage] = useState('');
   const [form, setForm] = useState<SettingsFormState>({
     nomeEmpresa: empresa.nome,
     descricao: empresa.descricao,
     cidadeUf: empresa.cidade,
     whatsapp: empresa.whatsapp,
-    corPrincipal: '#f97316',
-    taxaEntrega: '7.00',
-    pedidoMinimo: '25.00',
+    corPrincipal: empresa.corPrincipal,
+    taxaEntrega: String(empresa.taxaEntrega),
+    pedidoMinimo: String(empresa.pedidoMinimo),
     statusManual: empresa.statusManual,
     mensagemCliente: empresa.mensagemCliente,
     horarioFuncionamento: empresa.horarioFuncionamento,
@@ -65,6 +65,9 @@ export function AdminSettingsPage() {
       statusManual: form.statusManual,
       mensagemCliente: form.mensagemCliente,
       horarioFuncionamento: form.horarioFuncionamento,
+      corPrincipal: form.corPrincipal,
+      taxaEntrega: Number(form.taxaEntrega),
+      pedidoMinimo: Number(form.pedidoMinimo),
     });
     setSavedMessage('Configurações e funcionamento salvos localmente para demonstração.');
   }

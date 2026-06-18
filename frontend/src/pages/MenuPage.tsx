@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MenuCard } from '../components/MenuCard';
-import { useEmpresaConfig } from '../hooks/useEmpresaConfig';
+import { useMenuExpressStore } from '../hooks/useMenuExpressStore';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { buildWhatsAppOrderUrl, menuCatalogService } from '../services';
-import type { CartItem, MenuCategory, MenuItem } from '../types/menu';
+import { buildWhatsAppOrderUrl } from '../services';
+import type { CartItem, MenuItem } from '../types/menu';
 import { getStoreOpenStatus } from '../utils/openingHours';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -14,25 +14,43 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 export function MenuPage() {
   usePageTitle('Cardápio');
 
-  const menuCatalog = menuCatalogService.getDemoCatalog();
-  const { categoriasNomes: menuCategories, produtos: demoMenuItems, restaurant: demoRestaurant } = menuCatalog;
-  const { empresa } = useEmpresaConfig();
+  const { activeCategorias, empresa, publicProdutos } = useMenuExpressStore();
+  const menuCategories = useMemo(() => activeCategorias.map((category) => category.nome), [activeCategorias]);
   const storeStatus = getStoreOpenStatus(empresa);
 
-  const [selectedCategory, setSelectedCategory] = useState<MenuCategory>('Promoções');
+  const [selectedCategory, setSelectedCategory] = useState('Promoções');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [orderNote, setOrderNote] = useState('');
   const [checkoutMessage, setCheckoutMessage] = useState('');
 
+  useEffect(() => {
+    if (menuCategories.length > 0 && !menuCategories.includes(selectedCategory)) {
+      setSelectedCategory(menuCategories[0]);
+    }
+  }, [menuCategories, selectedCategory]);
+
+  useEffect(() => {
+    const publicProductMap = new Map(publicProdutos.map((product) => [product.id, product]));
+
+    setCartItems((currentItems) =>
+      currentItems
+        .filter((item) => publicProductMap.has(item.product.id))
+        .map((item) => ({ ...item, product: publicProductMap.get(item.product.id) ?? item.product })),
+    );
+  }, [publicProdutos]);
+
   const filteredItems = useMemo(
-    () => demoMenuItems.filter((item) => item.categoria === selectedCategory),
-    [demoMenuItems, selectedCategory],
+    () => publicProdutos.filter((item) => item.categoria === selectedCategory),
+    [publicProdutos, selectedCategory],
   );
 
   const subtotal = useMemo(
     () => cartItems.reduce((total, item) => total + item.product.preco * item.quantity, 0),
     [cartItems],
   );
+
+  const deliveryFee = cartItems.length > 0 ? empresa.taxaEntrega : 0;
+  const total = subtotal + deliveryFee;
 
   const totalItems = useMemo(
     () => cartItems.reduce((total, item) => total + item.quantity, 0),
@@ -100,8 +118,11 @@ export function MenuPage() {
       'Observação:',
       orderNote.trim() || 'Sem observações.',
       '',
+      'Taxa de entrega:',
+      currencyFormatter.format(deliveryFee),
+      '',
       'Total:',
-      currencyFormatter.format(subtotal),
+      currencyFormatter.format(total),
       '',
       'Dados para finalizar:',
       'Nome:',
@@ -122,8 +143,13 @@ export function MenuPage() {
       return;
     }
 
+    if (subtotal < empresa.pedidoMinimo) {
+      setCheckoutMessage(`O pedido mínimo é ${currencyFormatter.format(empresa.pedidoMinimo)}. Adicione mais itens para finalizar.`);
+      return;
+    }
+
     setCheckoutMessage('');
-    const whatsappUrl = buildWhatsAppOrderUrl(demoRestaurant.whatsapp, buildCheckoutMessage());
+    const whatsappUrl = buildWhatsAppOrderUrl(empresa.whatsapp, buildCheckoutMessage());
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   }
 
@@ -134,19 +160,20 @@ export function MenuPage() {
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.25em] text-brand-100">Cardápio digital</p>
-              <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">{demoRestaurant.name}</h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">{demoRestaurant.description}</p>
-              <p className="mt-4 text-sm font-semibold text-slate-300">📍 {demoRestaurant.city}</p>
+              <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">{empresa.nome}</h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">{empresa.descricao}</p>
+              <p className="mt-4 text-sm font-semibold text-slate-300">📍 {empresa.cidade}</p>
             </div>
             <div className="rounded-[1.5rem] bg-white/10 p-5 backdrop-blur">
               <p className="text-sm font-semibold text-slate-200">Seu pedido agora</p>
-              <p className="mt-3 text-3xl font-black">{currencyFormatter.format(subtotal)}</p>
+              <p className="mt-3 text-3xl font-black">{currencyFormatter.format(total)}</p>
               <p className="mt-2 text-sm text-slate-300">{totalItems} item(ns) selecionado(s)</p>
               <button
                 type="button"
                 onClick={handleCheckout}
                 disabled={!storeStatus.isOpen}
-                className="mt-5 w-full rounded-full bg-brand-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-500"
+                style={storeStatus.isOpen ? { backgroundColor: empresa.corPrincipal } : undefined}
+                className="mt-5 w-full rounded-full bg-brand-500 px-5 py-3 text-center text-sm font-black text-white hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-500"
               >
                 Finalizar Pedido
               </button>
@@ -225,6 +252,8 @@ export function MenuPage() {
             <CartSummary
               cartItems={cartItems}
               subtotal={subtotal}
+              deliveryFee={deliveryFee}
+              total={total}
               orderNote={orderNote}
               checkoutMessage={checkoutMessage}
               onOrderNoteChange={setOrderNote}
@@ -233,6 +262,7 @@ export function MenuPage() {
               onDecrement={decrementProduct}
               onRemove={removeProduct}
               isStoreOpen={storeStatus.isOpen}
+              brandColor={empresa.corPrincipal}
             />
           </aside>
         </div>
@@ -242,6 +272,8 @@ export function MenuPage() {
         <CartSummary
           cartItems={cartItems}
           subtotal={subtotal}
+          deliveryFee={deliveryFee}
+          total={total}
           orderNote={orderNote}
           checkoutMessage={checkoutMessage}
           onOrderNoteChange={setOrderNote}
@@ -250,6 +282,7 @@ export function MenuPage() {
           onDecrement={decrementProduct}
           onRemove={removeProduct}
           isStoreOpen={storeStatus.isOpen}
+          brandColor={empresa.corPrincipal}
           compact
         />
       </div>
@@ -260,6 +293,8 @@ export function MenuPage() {
 type CartSummaryProps = {
   cartItems: CartItem[];
   subtotal: number;
+  deliveryFee: number;
+  total: number;
   orderNote: string;
   checkoutMessage: string;
   compact?: boolean;
@@ -269,11 +304,14 @@ type CartSummaryProps = {
   onDecrement: (productId: string) => void;
   onRemove: (productId: string) => void;
   isStoreOpen: boolean;
+  brandColor: string;
 };
 
 function CartSummary({
   cartItems,
   subtotal,
+  deliveryFee,
+  total,
   orderNote,
   checkoutMessage,
   compact = false,
@@ -283,15 +321,16 @@ function CartSummary({
   onDecrement,
   onRemove,
   isStoreOpen,
+  brandColor,
 }: CartSummaryProps) {
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-black text-slate-950">Carrinho</h2>
-          <p className="text-sm text-slate-500">Subtotal e total geral</p>
+          <p className="text-sm text-slate-500">Subtotal, entrega e total geral</p>
         </div>
-        <p className="text-xl font-black text-slate-950">{currencyFormatter.format(subtotal)}</p>
+        <p className="text-xl font-black text-slate-950">{currencyFormatter.format(total)}</p>
       </div>
 
       {!compact ? (
@@ -341,9 +380,13 @@ function CartSummary({
           <span>Subtotal</span>
           <span>{currencyFormatter.format(subtotal)}</span>
         </div>
+        <div className="flex justify-between text-sm text-slate-600">
+          <span>Taxa de entrega</span>
+          <span>{currencyFormatter.format(deliveryFee)}</span>
+        </div>
         <div className="flex justify-between text-base font-black text-slate-950">
           <span>Total geral</span>
-          <span>{currencyFormatter.format(subtotal)}</span>
+          <span>{currencyFormatter.format(total)}</span>
         </div>
       </div>
 
@@ -377,7 +420,8 @@ function CartSummary({
         type="button"
         onClick={onCheckout}
         disabled={!isStoreOpen}
-        className="mt-4 w-full rounded-full bg-brand-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-orange-200 hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+        style={isStoreOpen ? { backgroundColor: brandColor } : undefined}
+        className="mt-4 w-full rounded-full bg-brand-600 px-5 py-3 text-center text-sm font-black text-white shadow-lg shadow-orange-200 hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
       >
         Finalizar Pedido
       </button>
