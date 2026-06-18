@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { demoCategorias, demoEmpresa, demoMenuItems, menuCategories } from '../../data/menu';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -30,12 +30,42 @@ export function AdminProductsPage() {
   const [products, setProducts] = useState<MenuItem[]>(demoMenuItems);
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const submitLabel = useMemo(() => (editingProductId ? 'Salvar alterações' : 'Cadastrar produto'), [editingProductId]);
+  const modalTitle = editingProductId ? 'Editar produto' : 'Novo produto';
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    }
+
+    if (isModalOpen) {
+      window.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
 
   function resetForm() {
     setForm(emptyProductForm);
     setEditingProductId(null);
+  }
+
+  function closeModal() {
+    setIsModalOpen(false);
+    resetForm();
+  }
+
+  function openCreateModal() {
+    resetForm();
+    setIsModalOpen(true);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -65,7 +95,7 @@ export function AdminProductsPage() {
       setProducts((currentProducts) => [product, ...currentProducts]);
     }
 
-    resetForm();
+    closeModal();
   }
 
   function handleEdit(product: MenuItem) {
@@ -79,13 +109,14 @@ export function AdminProductsPage() {
       ativo: product.disponivel,
       destaque: product.destaque,
     });
+    setIsModalOpen(true);
   }
 
   function removeProduct(productId: string) {
     setProducts((currentProducts) => currentProducts.filter((product) => product.id !== productId));
 
     if (editingProductId === productId) {
-      resetForm();
+      closeModal();
     }
   }
 
@@ -97,7 +128,17 @@ export function AdminProductsPage() {
         description="Cadastre produtos, destaque promoções e mantenha a listagem pronta para futura persistência no Supabase."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+      <div className="space-y-6">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="rounded-full bg-brand-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-brand-700"
+          >
+            Novo produto
+          </button>
+        </div>
+
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-5">
             <h2 className="text-xl font-black text-slate-950">Produtos cadastrados</h2>
@@ -120,10 +161,18 @@ export function AdminProductsPage() {
                   <p className="mt-1 text-sm text-slate-500">{product.categoria} · {product.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => handleEdit(product)} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:border-brand-500 hover:text-brand-600">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(product)}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:border-brand-500 hover:text-brand-600"
+                  >
                     Editar
                   </button>
-                  <button type="button" onClick={() => removeProduct(product.id)} className="rounded-full bg-red-50 px-4 py-2 text-sm font-black text-red-600 hover:bg-red-100">
+                  <button
+                    type="button"
+                    onClick={() => removeProduct(product.id)}
+                    className="rounded-full bg-red-50 px-4 py-2 text-sm font-black text-red-600 hover:bg-red-100"
+                  >
                     Remover
                   </button>
                 </div>
@@ -131,48 +180,76 @@ export function AdminProductsPage() {
             ))}
           </div>
         </div>
-
-        <form onSubmit={handleSubmit} className="h-fit rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-black text-slate-950">{editingProductId ? 'Editar produto' : 'Novo produto'}</h2>
-            {editingProductId ? (
-              <button type="button" onClick={resetForm} className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 hover:border-slate-300 hover:text-slate-900">
-                Cancelar edição
-              </button>
-            ) : null}
-          </div>
-          <div className="mt-5 space-y-4">
-            <label className="block text-sm font-bold text-slate-700">Nome
-              <input required value={form.nome} onChange={(event) => setForm({ ...form, nome: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <label className="block text-sm font-bold text-slate-700">Descrição
-              <textarea required value={form.descricao} onChange={(event) => setForm({ ...form, descricao: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-bold text-slate-700">Preço
-                <input required type="number" min="0" step="0.01" value={form.preco} onChange={(event) => setForm({ ...form, preco: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-              </label>
-              <label className="block text-sm font-bold text-slate-700">Categoria
-                <select value={form.categoria} onChange={(event) => setForm({ ...form, categoria: event.target.value as MenuCategory })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
-                  {menuCategories.map((category) => <option key={category}>{category}</option>)}
-                </select>
-              </label>
-            </div>
-            <label className="block text-sm font-bold text-slate-700">Imagem / URL
-              <input value={form.imagem} onChange={(event) => setForm({ ...form, imagem: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
-                <input type="checkbox" checked={form.ativo} onChange={(event) => setForm({ ...form, ativo: event.target.checked })} /> Ativo
-              </label>
-              <label className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
-                <input type="checkbox" checked={form.destaque} onChange={(event) => setForm({ ...form, destaque: event.target.checked })} /> Destaque
-              </label>
-            </div>
-            <button type="submit" className="w-full rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700">{submitLabel}</button>
-          </div>
-        </form>
       </div>
+
+      {isModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm"
+          onClick={closeModal}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="product-modal-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-brand-600">Catálogo</p>
+                <h2 id="product-modal-title" className="mt-1 text-2xl font-black text-slate-950">
+                  {modalTitle}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-black text-slate-600 hover:border-slate-300 hover:text-slate-900"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              <label className="block text-sm font-bold text-slate-700">Nome
+                <input required autoFocus value={form.nome} onChange={(event) => setForm({ ...form, nome: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+              </label>
+              <label className="block text-sm font-bold text-slate-700">Descrição
+                <textarea required value={form.descricao} onChange={(event) => setForm({ ...form, descricao: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-bold text-slate-700">Preço
+                  <input required type="number" min="0" step="0.01" value={form.preco} onChange={(event) => setForm({ ...form, preco: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+                </label>
+                <label className="block text-sm font-bold text-slate-700">Categoria
+                  <select value={form.categoria} onChange={(event) => setForm({ ...form, categoria: event.target.value as MenuCategory })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                    {menuCategories.map((category) => <option key={category}>{category}</option>)}
+                  </select>
+                </label>
+              </div>
+              <label className="block text-sm font-bold text-slate-700">Imagem / URL
+                <input value={form.imagem} onChange={(event) => setForm({ ...form, imagem: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
+                  <input type="checkbox" checked={form.ativo} onChange={(event) => setForm({ ...form, ativo: event.target.checked })} /> Ativo
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
+                  <input type="checkbox" checked={form.destaque} onChange={(event) => setForm({ ...form, destaque: event.target.checked })} /> Destaque
+                </label>
+              </div>
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+                <button type="button" onClick={closeModal} className="rounded-full border border-slate-200 px-5 py-3 font-black text-slate-700 hover:border-slate-300 hover:text-slate-900">
+                  Cancelar
+                </button>
+                <button type="submit" className="rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700">
+                  {submitLabel}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
