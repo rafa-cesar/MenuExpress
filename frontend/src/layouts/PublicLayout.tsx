@@ -1,27 +1,34 @@
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
+// Rotas que gerenciam seu próprio layout completo (sem nav/footer compartilhados)
+const STANDALONE_ROUTES = ['/', '/assinar', '/login'];
+
 export function PublicLayout() {
-  const isAdminArea = window.location.pathname.startsWith('/admin');
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAdminArea = pathname.startsWith('/admin');
+  const isStandalone = STANDALONE_ROUTES.includes(pathname);
+
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setIsAdmin(!!data.session);
     });
-
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAdmin(!!session);
     });
-
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  if (isAdminArea) {
-    return <Outlet />;
-  }
+  // Área admin: sem layout público
+  if (isAdminArea) return <Outlet />;
 
+  // Landing, Assinar, Login: layout próprio, sem wrapper
+  if (isStandalone) return <Outlet />;
+
+  // Demais rotas públicas (ex: /cardapio): mantém nav + footer
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -30,33 +37,23 @@ export function PublicLayout() {
             Menu<span className="text-brand-600">Express</span>
           </Link>
           <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <Link to="/" className="hover:text-brand-600">
-              Home
-            </Link>
-            <Link
-              to="/cardapio"
-              className="rounded-full bg-brand-600 px-4 py-2 text-white hover:bg-brand-700"
-            >
+            <Link to="/" className="hover:text-brand-600">Home</Link>
+            <Link to="/cardapio" className="rounded-full bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
               Ver meu cardápio
             </Link>
             {isAdmin && (
-              <Link
-                to="/admin"
-                className="rounded-full border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand-600 hover:text-brand-600"
-              >
+              <Link to="/admin" className="rounded-full border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand-600 hover:text-brand-600">
                 ← Voltar ao Admin
               </Link>
             )}
           </div>
         </nav>
       </header>
-      <main>
-        <Outlet />
-      </main>
+      <main><Outlet /></main>
       <footer className="border-t border-slate-200 bg-white py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-1 px-4 text-sm text-slate-500 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
           <span>© {new Date().getFullYear()} <strong className="text-slate-700">Yellow Tech</strong>. Todos os direitos reservados.</span>
-          <span className="text-xs text-slate-400">MenuExpress &mdash; plataforma de cardápios digitais</span>
+          <span className="text-xs text-slate-400">MenuExpress — plataforma de cardápios digitais</span>
         </div>
       </footer>
     </div>
