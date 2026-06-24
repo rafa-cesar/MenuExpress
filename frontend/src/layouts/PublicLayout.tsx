@@ -2,7 +2,8 @@ import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const STANDALONE_ROUTES = ['/', '/assinar', '/login', '/cadastro'];
+// Rotas que renderizam sozinhas, sem header/footer do PublicLayout
+const STANDALONE_ROUTES = ['/', '/assinar', '/login', '/cadastro', '/cardapio'];
 
 export function PublicLayout() {
   const { pathname } = useLocation();
@@ -15,7 +16,7 @@ export function PublicLayout() {
   }, []);
 
   if (pathname.startsWith('/admin')) return <Outlet />;
-  if (STANDALONE_ROUTES.includes(pathname)) return <Outlet />;
+  if (STANDALONE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + '/'))) return <Outlet />;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -26,12 +27,9 @@ export function PublicLayout() {
           </Link>
           <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
             <Link to="/" className="hover:text-brand-600">Home</Link>
-            <Link to="/cardapio" className="rounded-full bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
-              Ver cardápio
-            </Link>
             {isAdmin && (
               <Link to="/admin" className="rounded-full border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand-600 hover:text-brand-600">
-                ← Voltar ao Admin
+                ← Admin
               </Link>
             )}
           </div>
@@ -41,6 +39,7 @@ export function PublicLayout() {
       <footer className="border-t border-slate-200 bg-white py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-1 px-4 text-sm text-slate-500 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
           <span>© {new Date().getFullYear()} <strong className="text-slate-700">MenuExpress</strong>. Todos os direitos reservados.</span>
+          <span>Powered by <strong className="text-slate-600">YellowTech</strong></span>
         </div>
       </footer>
     </div>

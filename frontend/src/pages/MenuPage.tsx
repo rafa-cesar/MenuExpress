@@ -33,18 +33,10 @@ function ConfirmacaoScreen({
   return (
     <section className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl text-center">
-
-        {/* Ícone */}
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl">
-          ✅
-        </div>
-
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl">✅</div>
         <h1 className="mt-6 text-3xl font-black text-slate-950">Pedido recebido!</h1>
-        <p className="mt-2 text-slate-500">
-          Seu pedido foi registrado com sucesso.
-        </p>
+        <p className="mt-2 text-slate-500">Seu pedido foi registrado com sucesso.</p>
 
-        {/* Número do pedido */}
         <div className="mt-6 rounded-2xl border-2 border-dashed px-6 py-5" style={{ borderColor: brand.primary }}>
           <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Número do pedido</p>
           <p className="mt-1 text-5xl font-black" style={{ color: brand.primary }}>
@@ -52,7 +44,6 @@ function ConfirmacaoScreen({
           </p>
         </div>
 
-        {/* Resumo */}
         <div className="mt-6 space-y-2 rounded-2xl bg-slate-50 px-5 py-4 text-left">
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Modalidade</span>
@@ -65,7 +56,7 @@ function ConfirmacaoScreen({
             </div>
           )}
           <div className="flex justify-between border-t border-slate-200 pt-2 text-sm">
-            <span className="font-black text-slate-900">Total pago</span>
+            <span className="font-black text-slate-900">Total</span>
             <span className="font-black" style={{ color: brand.primary }}>{fmt.format(pedido.total)}</span>
           </div>
         </div>
@@ -75,7 +66,6 @@ function ConfirmacaoScreen({
           <br /><strong className="text-slate-600">{empresa.nome}</strong> já foi notificado.
         </p>
 
-        {/* WhatsApp opcional */}
         {whatsapp && (
           <a
             href={buildWhatsAppOrderUrl(whatsapp, whatsappMsg)}
@@ -91,16 +81,15 @@ function ConfirmacaoScreen({
           </a>
         )}
 
-        {/* Novo pedido */}
-        <button
-          type="button"
-          onClick={onNovoPedido}
-          className="mt-3 w-full rounded-full py-3.5 font-black text-white transition"
-          style={btnStyle}
-        >
+        <button type="button" onClick={onNovoPedido} className="mt-3 w-full rounded-full py-3.5 font-black text-white transition" style={btnStyle}>
           Fazer novo pedido
         </button>
       </div>
+
+      {/* Crédito YellowTech */}
+      <p className="mt-8 text-xs text-slate-400">
+        Powered by <strong className="text-slate-500">YellowTech</strong>
+      </p>
     </section>
   );
 }
@@ -129,11 +118,11 @@ export function MenuPage() {
   const [salvando, setSalvando]                 = useState(false);
   const [pedidoFeito, setPedidoFeito]           = useState<Pedido | null>(null);
 
-  const filteredItems = useMemo(() => produtos.filter((item) => item.categoria === selectedCategory), [produtos, selectedCategory]);
-  const subtotal      = useMemo(() => cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0), [cartItems]);
-  const taxa          = modalidade === 'entrega' && cfg.entregaAtiva ? cfg.taxaEntregaFixa : 0;
-  const total         = subtotal + taxa;
-  const totalItems    = useMemo(() => cartItems.reduce((t, i) => t + i.quantity, 0), [cartItems]);
+  const filteredItems  = useMemo(() => produtos.filter((item) => item.categoria === selectedCategory), [produtos, selectedCategory]);
+  const subtotal       = useMemo(() => cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0), [cartItems]);
+  const taxa           = modalidade === 'entrega' && cfg.entregaAtiva ? cfg.taxaEntregaFixa : 0;
+  const total          = subtotal + taxa;
+  const totalItems     = useMemo(() => cartItems.reduce((t, i) => t + i.quantity, 0), [cartItems]);
   const abaixoDoMinimo = modalidade === 'entrega' && cfg.pedidoMinimoEntrega > 0 && subtotal < cfg.pedidoMinimoEntrega;
 
   function getQty(id: string) { return cartItems.find((i) => i.product.id === id)?.quantity ?? 0; }
@@ -177,17 +166,14 @@ export function MenuPage() {
   }
 
   async function handleCheckout() {
-    if (!storeStatus.aberta) { setCheckoutMessage(MOTIVO_LABEL[storeStatus.motivo] ?? 'A loja está fechada.'); return; }
+    if (!storeStatus.aberta)   { setCheckoutMessage(MOTIVO_LABEL[storeStatus.motivo] ?? 'A loja está fechada.'); return; }
     if (cartItems.length === 0) { setCheckoutMessage('Adicione pelo menos um produto ao carrinho.'); return; }
-    if (abaixoDoMinimo) { setCheckoutMessage(`Pedido mínimo para entrega é ${fmt.format(cfg.pedidoMinimoEntrega)}.`); return; }
+    if (abaixoDoMinimo)        { setCheckoutMessage(`Pedido mínimo para entrega é ${fmt.format(cfg.pedidoMinimoEntrega)}.`); return; }
     setCheckoutMessage('');
     setSalvando(true);
 
     const pedido = await pedidosService.criar({
-      modalidade,
-      clienteNome,
-      clienteTel,
-      clienteEnd,
+      modalidade, clienteNome, clienteTel, clienteEnd,
       itens: cartItems.map((i) => ({
         nome: i.product.nome,
         quantidade: i.quantity,
@@ -195,19 +181,12 @@ export function MenuPage() {
         subtotal: i.product.preco * i.quantity,
       })),
       observacao: orderNote,
-      subtotal,
-      taxaEntrega: taxa,
-      total,
+      subtotal, taxaEntrega: taxa, total,
     });
 
     setSalvando(false);
 
-    if (!pedido) {
-      setCheckoutMessage('Erro ao registrar pedido. Tente novamente.');
-      return;
-    }
-
-    // Sucesso — mostra tela de confirmação
+    if (!pedido) { setCheckoutMessage('Erro ao registrar pedido. Tente novamente.'); return; }
     setPedidoFeito(pedido);
   }
 
@@ -224,16 +203,12 @@ export function MenuPage() {
 
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
 
-  // ─── Tela de confirmação ───
   if (pedidoFeito) {
     return (
       <ConfirmacaoScreen
-        pedido={pedidoFeito}
-        empresa={empresa}
-        whatsappMsg={buildMsg()}
-        whatsapp={empresa.whatsapp}
-        brand={brand}
-        onNovoPedido={handleNovoPedido}
+        pedido={pedidoFeito} empresa={empresa}
+        whatsappMsg={buildMsg()} whatsapp={empresa.whatsapp}
+        brand={brand} onNovoPedido={handleNovoPedido}
       />
     );
   }
@@ -264,7 +239,7 @@ export function MenuPage() {
               <p className="mt-4 text-sm font-semibold text-white/75">📍 {empresa.cidade}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {cfg.retiradaAtiva && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🏠 Retirada disponível</span>}
-                {cfg.entregaAtiva && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(cfg.taxaEntregaFixa)}</span>}
+                {cfg.entregaAtiva  && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(cfg.taxaEntregaFixa)}</span>}
               </div>
             </div>
             <div className="rounded-[1.5rem] p-5" style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)' }}>
@@ -343,8 +318,11 @@ export function MenuPage() {
         />
       </div>
 
-      <div className="px-4 pb-6 pt-8 text-center text-xs text-slate-400">
-        Powered by <strong>MenuExpress</strong>
+      {/* Rodapé do cardápio */}
+      <div className="px-4 pb-6 pt-10 text-center">
+        <p className="text-xs text-slate-400">
+          Cardápio digital por <strong className="text-slate-500">YellowTech</strong>
+        </p>
       </div>
     </section>
   );
@@ -378,7 +356,9 @@ function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessag
         <div className="mt-4 grid grid-cols-2 gap-2">
           {(['retirada', 'entrega'] as ModalidadeEntrega[]).map((m) => (
             <button key={m} type="button" onClick={() => onModalidade(m)}
-              className={`rounded-2xl border-2 py-3 text-sm font-black transition ${modalidade === m ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>
+              className={`rounded-2xl border-2 py-3 text-sm font-black transition ${
+                modalidade === m ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}>
               {m === 'retirada' ? '🏠 Retirada' : '🚚 Entrega'}
             </button>
           ))}
