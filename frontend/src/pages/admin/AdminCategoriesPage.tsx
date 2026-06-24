@@ -1,8 +1,9 @@
 import { FormEvent, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
-import { demoCategorias, demoEmpresa } from '../../data/menu';
+import { demoEmpresa } from '../../data/menu';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { Categoria } from '../../types/menu';
+import { useMenuStore } from '../../context/MenuStoreContext';
 
 type CategoryFormState = {
   nome: string;
@@ -28,7 +29,7 @@ function slugify(value: string) {
 export function AdminCategoriesPage() {
   usePageTitle('Admin Categorias');
 
-  const [categories, setCategories] = useState<Categoria[]>(demoCategorias);
+  const { categorias, setCategorias } = useMenuStore();
   const [form, setForm] = useState<CategoryFormState>(emptyCategoryForm);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -43,12 +44,12 @@ export function AdminCategoriesPage() {
       ativa: form.ativa,
     };
 
-    setCategories((currentCategories) => [...currentCategories, category].sort((a, b) => a.ordem - b.ordem));
+    setCategorias((currentCategories) => [...currentCategories, category].sort((a, b) => a.ordem - b.ordem));
     setForm(emptyCategoryForm);
   }
 
   function removeCategory(categoryId: string) {
-    setCategories((currentCategories) => currentCategories.filter((category) => category.id !== categoryId));
+    setCategorias((currentCategories) => currentCategories.filter((category) => category.id !== categoryId));
   }
 
   return (
@@ -65,7 +66,7 @@ export function AdminCategoriesPage() {
             <h2 className="text-xl font-black text-slate-950">Categorias cadastradas</h2>
           </div>
           <div className="divide-y divide-slate-100">
-            {categories.map((category) => (
+            {categorias.map((category) => (
               <article key={category.id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-lg font-black text-slate-950">{category.ordem}. {category.nome}</p>
