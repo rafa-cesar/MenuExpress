@@ -1,8 +1,8 @@
 export type EmpresaStatus = 'ativa' | 'inativa';
 export type PedidoStatus = 'rascunho' | 'enviado' | 'confirmado' | 'cancelado';
-
 export type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
+export type EstiloVisual = 'moderno' | 'clean' | 'vibrante' | 'classico';
 
 export interface HorarioDia {
   ativo: boolean;
@@ -28,6 +28,7 @@ export interface Empresa {
   status: EmpresaStatus;
   corPrincipal: string;
   logoUrl?: string;
+  estiloVisual?: EstiloVisual;
   taxaEntrega: number;
   pedidoMinimo: number;
   horario: HorarioFuncionamento;
