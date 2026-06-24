@@ -9,25 +9,15 @@ import type { Pedido } from '../../types/domain';
 const fmt     = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const fmtDate = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 
-// ─── helpers de data ────────────────────────────────────────────────
 function startOfDay(d: Date) { const r = new Date(d); r.setHours(0,0,0,0); return r; }
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function isoDay(d: Date) { return d.toISOString().slice(0,10); }
 
-// ─── exportação CSV ──────────────────────────────────────────────────
 function exportCSV(pedidos: Pedido[], label: string) {
   const header = 'Numero,Data,Status,Modalidade,Cliente,Subtotal,Taxa,Total';
   const rows = pedidos.map((p) =>
-    [
-      p.numero,
-      new Date(p.criadoEm).toLocaleString('pt-BR'),
-      p.status,
-      p.modalidade,
-      p.clienteNome ?? '',
-      p.subtotal.toFixed(2),
-      p.taxaEntrega.toFixed(2),
-      p.total.toFixed(2),
-    ].join(',')
+    [p.numero, new Date(p.criadoEm).toLocaleString('pt-BR'), p.status, p.modalidade,
+     p.clienteNome ?? '', p.subtotal.toFixed(2), p.taxaEntrega.toFixed(2), p.total.toFixed(2)].join(',')
   );
   const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
@@ -36,7 +26,6 @@ function exportCSV(pedidos: Pedido[], label: string) {
   URL.revokeObjectURL(url);
 }
 
-// ─── KPI card ────────────────────────────────────────────────────────
 function KpiCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -47,7 +36,6 @@ function KpiCard({ label, value, sub, accent }: { label: string; value: string; 
   );
 }
 
-// ─── gráfico de barras simples (SVG inline) ──────────────────────────
 function BarChart({ data }: { data: { label: string; value: number }[] }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
@@ -58,13 +46,13 @@ function BarChart({ data }: { data: { label: string; value: number }[] }) {
           <div key={d.label} className="group flex flex-1 flex-col items-center gap-1">
             <div className="relative w-full">
               {d.value > 0 && (
-                <div className="absolute -top-6 left-1/2 hidden -translate-x-1/2 rounded-lg bg-slate-950 px-2 py-1 text-[10px] font-bold text-white group-hover:block whitespace-nowrap">
+                <div className="absolute -top-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-2 py-1 text-[10px] font-bold text-white group-hover:block">
                   {fmt.format(d.value)}
                 </div>
               )}
               <div
-                className="w-full rounded-t-lg bg-slate-950 transition-all"
-                style={{ height: `${Math.max(pct * 112, d.value > 0 ? 4 : 2)}px`, opacity: pct > 0 ? 0.85 + pct * 0.15 : 0.15 }}
+                className="w-full rounded-t-lg bg-brand-500 transition-all"
+                style={{ height: `${Math.max(pct * 112, d.value > 0 ? 4 : 2)}px`, opacity: pct > 0 ? 0.6 + pct * 0.4 : 0.15 }}
               />
             </div>
             <p className="text-[9px] font-semibold capitalize text-slate-400">{d.label}</p>
@@ -75,7 +63,6 @@ function BarChart({ data }: { data: { label: string; value: number }[] }) {
   );
 }
 
-// ─── alerta ──────────────────────────────────────────────────────────
 function AlertCard({ title, body, to, cta }: { title: string; body: string; to: string; cta: string }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
@@ -90,14 +77,14 @@ function AlertCard({ title, body, to, cta }: { title: string; body: string; to: 
 }
 
 export function AdminDashboardPage() {
-  usePageTitle('Dashboard');
+  usePageTitle('Dashboard — MenuExpress');
   const { empresa, produtos, categorias } = useMenuStore();
   const storeStatus = useStoreStatus();
 
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [pedidos, setPedidos]     = useState<Pedido[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [exportando, setExportando] = useState(false);
-  const [periodo, setPeriodo] = useState<'hoje' | '7d' | '30d'>('7d');
+  const [periodo, setPeriodo]     = useState<'hoje' | '7d' | '30d'>('7d');
 
   useEffect(() => {
     async function load() {
@@ -111,20 +98,14 @@ export function AdminDashboardPage() {
     load();
   }, []);
 
-  // ─── filtro por período ──────────────────────────────────────────
   const pedidosFiltrados = useMemo(() => {
-    const agora = new Date();
-    const inicio = periodo === 'hoje'
-      ? startOfDay(agora)
-      : periodo === '7d'
-      ? startOfDay(addDays(agora, -6))
+    const agora  = new Date();
+    const inicio = periodo === 'hoje' ? startOfDay(agora)
+      : periodo === '7d' ? startOfDay(addDays(agora, -6))
       : startOfDay(addDays(agora, -29));
-    return pedidos.filter(
-      (p) => new Date(p.criadoEm) >= inicio && p.status !== 'cancelado'
-    );
+    return pedidos.filter((p) => new Date(p.criadoEm) >= inicio && p.status !== 'cancelado');
   }, [pedidos, periodo]);
 
-  // ─── KPIs ────────────────────────────────────────────────────────
   const faturamento  = useMemo(() => pedidosFiltrados.reduce((s, p) => s + p.total, 0), [pedidosFiltrados]);
   const numPedidos   = pedidosFiltrados.length;
   const ticketMedio  = numPedidos > 0 ? faturamento / numPedidos : 0;
@@ -133,36 +114,32 @@ export function AdminDashboardPage() {
   ), [pedidos]);
   const faturadoHoje = pedidosHoje.reduce((s, p) => s + p.total, 0);
 
-  // ─── gráfico semanal ─────────────────────────────────────────────
   const chartData = useMemo(() => {
     const dias = periodo === 'hoje' ? 1 : periodo === '7d' ? 7 : 30;
     return Array.from({ length: dias }, (_, i) => {
-      const day = startOfDay(addDays(new Date(), -(dias - 1 - i)));
-      const key = isoDay(day);
+      const day   = startOfDay(addDays(new Date(), -(dias - 1 - i)));
+      const key   = isoDay(day);
       const total = pedidos
         .filter((p) => isoDay(new Date(p.criadoEm)) === key && p.status !== 'cancelado')
         .reduce((s, p) => s + p.total, 0);
       const label = dias <= 7
-        ? fmtDate.format(day).split(',')[0]   // seg, ter...
-        : String(day.getDate()).padStart(2,'0');
+        ? fmtDate.format(day).split(',')[0]
+        : String(day.getDate()).padStart(2, '0');
       return { label, value: total };
     });
   }, [pedidos, periodo]);
 
-  // ─── top produtos ────────────────────────────────────────────────
   const topProdutos = useMemo(() => {
     const mapa: Record<string, { nome: string; qtd: number; total: number }> = {};
-    for (const p of pedidosFiltrados) {
+    for (const p of pedidosFiltrados)
       for (const item of p.itens) {
         if (!mapa[item.nome]) mapa[item.nome] = { nome: item.nome, qtd: 0, total: 0 };
         mapa[item.nome].qtd   += item.quantidade;
         mapa[item.nome].total += item.subtotal;
       }
-    }
     return Object.values(mapa).sort((a, b) => b.total - a.total).slice(0, 5);
   }, [pedidosFiltrados]);
 
-  // ─── horário de pico ─────────────────────────────────────────────
   const horarioPico = useMemo(() => {
     const contagem: Record<number, number> = {};
     for (const p of pedidosFiltrados) {
@@ -172,23 +149,21 @@ export function AdminDashboardPage() {
     const entries = Object.entries(contagem);
     if (!entries.length) return null;
     const [hora, qtd] = entries.sort((a, b) => Number(b[1]) - Number(a[1]))[0];
-    return { hora: `${hora}h–${Number(hora)+1}h`, qtd: Number(qtd) };
+    return { hora: `${hora}h–${Number(hora) + 1}h`, qtd: Number(qtd) };
   }, [pedidosFiltrados]);
 
-  // ─── alertas operacionais ────────────────────────────────────────
   const produtosInativos      = produtos.filter((p) => !p.disponivel).length;
   const destaques             = produtos.filter((p) => p.destaque && p.disponivel).length;
   const categoriasSemProdutos = categorias.filter(
     (c) => c.ativa && !produtos.some((p) => p.categoriaId === c.id && p.disponivel)
   ).length;
   const alerts = [
-    produtosInativos > 0 && { title: `${produtosInativos} produto(s) pausado(s)`, body: 'Não aparecem no cardápio.', to: '/admin/produtos', cta: 'Revisar' },
+    produtosInativos > 0      && { title: `${produtosInativos} produto(s) pausado(s)`,    body: 'Não aparecem no cardápio.',      to: '/admin/produtos',      cta: 'Revisar' },
     empresa.horario?.status === 'forcar_fechado' && { title: 'Loja forçada como fechada', body: 'Clientes não conseguem pedir.', to: '/admin/configuracoes', cta: 'Abrir config.' },
-    categoriasSemProdutos > 0 && { title: `${categoriasSemProdutos} categoria(s) vazia(s)`, body: 'Ficam ocultas no cardápio.', to: '/admin/categorias', cta: 'Ver categorias' },
-    destaques === 0 && { title: 'Nenhum produto em destaque', body: 'Destaques aumentam conversões.', to: '/admin/produtos', cta: 'Destacar' },
+    categoriasSemProdutos > 0 && { title: `${categoriasSemProdutos} categoria(s) vazia(s)`, body: 'Ficam ocultas no cardápio.',   to: '/admin/categorias',    cta: 'Ver categorias' },
+    destaques === 0           && { title: 'Nenhum produto em destaque',                   body: 'Destaques aumentam conversões.',  to: '/admin/produtos',      cta: 'Destacar' },
   ].filter(Boolean) as { title: string; body: string; to: string; cta: string }[];
 
-  // ─── exportação ──────────────────────────────────────────────────
   async function handleExport() {
     setExportando(true);
     exportCSV(pedidosFiltrados, periodo);
@@ -200,7 +175,7 @@ export function AdminDashboardPage() {
   return (
     <section className="space-y-8">
 
-      {/* ── Cabeçalho ── */}
+      {/* Cabeçalho */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Visão geral</p>
@@ -216,63 +191,57 @@ export function AdminDashboardPage() {
             {storeStatus.aberta ? 'Loja aberta' : 'Loja fechada'}
           </span>
           <a href="/cardapio" target="_blank" rel="noopener noreferrer"
-            className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:border-slate-300">
+            className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-brand-300 hover:text-brand-600">
             Ver cardápio ↗
           </a>
         </div>
       </div>
 
-      {/* ── Seletor de período + Exportar ── */}
+      {/* Seletor de período + Exportar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
-          {(['hoje','7d','30d'] as const).map((p) => (
+          {(['hoje', '7d', '30d'] as const).map((p) => (
             <button key={p} type="button" onClick={() => setPeriodo(p)}
               className={`rounded-lg px-4 py-1.5 text-sm font-bold transition ${
-                periodo === p ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                periodo === p ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'
               }`}>
               {{ hoje: 'Hoje', '7d': '7 dias', '30d': '30 dias' }[p]}
             </button>
           ))}
         </div>
         <button type="button" onClick={handleExport} disabled={exportando || pedidosFiltrados.length === 0}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:border-slate-300 disabled:opacity-40">
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:border-brand-300 hover:text-brand-600 disabled:opacity-40">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
           {exportando ? 'Exportando...' : 'Exportar CSV'}
         </button>
       </div>
 
-      {/* ── KPIs principais ── */}
+      {/* KPIs */}
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-100" />
-          ))}
+          {[...Array(4)].map((_, i) => <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-100" />)}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard label={`Faturamento — ${periodoLabel}`} value={fmt.format(faturamento)}
-            sub={`Hoje: ${fmt.format(faturadoHoje)}`} accent="text-slate-950" />
-          <KpiCard label="Pedidos" value={String(numPedidos)}
-            sub={`${pedidosHoje.length} hoje`} />
-          <KpiCard label="Ticket médio" value={fmt.format(ticketMedio)}
-            sub="Por pedido no período" />
+            sub={`Hoje: ${fmt.format(faturadoHoje)}`} accent="text-brand-600" />
+          <KpiCard label="Pedidos" value={String(numPedidos)} sub={`${pedidosHoje.length} hoje`} />
+          <KpiCard label="Ticket médio" value={fmt.format(ticketMedio)} sub="Por pedido no período" />
           <KpiCard label="Horário de pico" value={horarioPico?.hora ?? '—'}
             sub={horarioPico ? `${horarioPico.qtd} pedidos nessa faixa` : 'Sem dados ainda'} />
         </div>
       )}
 
-      {/* ── Gráfico + Top produtos ── */}
+      {/* Gráfico + Top produtos */}
       {!loading && (
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-
-          {/* Gráfico de faturamento */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Faturamento</p>
                 <p className="mt-1 text-lg font-black text-slate-950">{periodoLabel}</p>
               </div>
-              <p className="text-2xl font-black text-slate-950">{fmt.format(faturamento)}</p>
+              <p className="text-2xl font-black text-brand-600">{fmt.format(faturamento)}</p>
             </div>
             <div className="mt-6">
               {chartData.every((d) => d.value === 0) ? (
@@ -285,7 +254,6 @@ export function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Top produtos */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Mais vendidos</p>
             <p className="mt-1 text-lg font-black text-slate-950">{periodoLabel}</p>
@@ -297,7 +265,9 @@ export function AdminDashboardPage() {
               <ul className="mt-4 space-y-3">
                 {topProdutos.map((p, i) => (
                   <li key={p.nome} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-500">{i + 1}</span>
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black ${
+                      i === 0 ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'
+                    }`}>{i + 1}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-slate-900">{p.nome}</p>
                       <p className="text-xs text-slate-400">{p.qtd} un. vendidas</p>
@@ -311,7 +281,7 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      {/* ── Alertas operacionais ── */}
+      {/* Alertas operacionais */}
       {alerts.length > 0 && (
         <div>
           <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Requer atenção</p>
@@ -321,19 +291,19 @@ export function AdminDashboardPage() {
         </div>
       )}
 
-      {/* ── Atalhos ── */}
+      {/* Atalhos */}
       <div>
         <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Gerenciar</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: 'Pedidos',       sub: 'Kanban em tempo real', to: '/admin/pedidos',      icon: '🛒' },
-            { label: 'Produtos',      sub: 'Adicionar ou pausar',  to: '/admin/produtos',     icon: '🍔' },
+            { label: 'Pedidos',       sub: 'Kanban em tempo real',  to: '/admin/pedidos',      icon: '🛒' },
+            { label: 'Produtos',      sub: 'Adicionar ou pausar',   to: '/admin/produtos',     icon: '🍔' },
             { label: 'Categorias',    sub: 'Organizar o cardápio',  to: '/admin/categorias',   icon: '📋' },
             { label: 'Configurações', sub: 'Loja, horário, entrega', to: '/admin/configuracoes', icon: '⚙️' },
           ].map((item) => (
             <Link key={item.to} to={item.to}
-              className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-xl group-hover:bg-slate-100">{item.icon}</span>
+              className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-300 hover:shadow-md">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-xl group-hover:bg-brand-50">{item.icon}</span>
               <div>
                 <p className="text-sm font-black text-slate-950">{item.label}</p>
                 <p className="text-xs text-slate-400">{item.sub}</p>
