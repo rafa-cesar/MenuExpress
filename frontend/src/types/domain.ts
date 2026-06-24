@@ -1,6 +1,23 @@
 export type EmpresaStatus = 'ativa' | 'inativa';
 export type PedidoStatus = 'rascunho' | 'enviado' | 'confirmado' | 'cancelado';
 
+export type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
+export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
+
+export interface HorarioDia {
+  ativo: boolean;
+  abertura: string;
+  fechamento: string;
+}
+
+export type HorarioDias = Record<DiaSemanaKey, HorarioDia>;
+
+export interface HorarioFuncionamento {
+  status: StatusLoja;
+  dias: HorarioDias;
+  mensagemCliente?: string;
+}
+
 export interface Empresa {
   id: string;
   nome: string;
@@ -9,6 +26,10 @@ export interface Empresa {
   whatsapp: string;
   cidade: string;
   status: EmpresaStatus;
+  corPrincipal: string;
+  taxaEntrega: number;
+  pedidoMinimo: number;
+  horario: HorarioFuncionamento;
 }
 
 export interface Categoria {
