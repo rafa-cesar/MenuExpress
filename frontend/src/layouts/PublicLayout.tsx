@@ -1,7 +1,22 @@
 import { Link, Outlet } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export function PublicLayout() {
   const isAdminArea = window.location.pathname.startsWith('/admin');
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAdmin(!!data.session);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAdmin(!!session);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   if (isAdminArea) {
     return <Outlet />;
@@ -14,13 +29,24 @@ export function PublicLayout() {
           <Link to="/" className="text-xl font-black tracking-tight text-slate-950">
             Menu<span className="text-brand-600">Express</span>
           </Link>
-          <div className="flex items-center gap-4 text-sm font-semibold text-slate-700">
+          <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
             <Link to="/" className="hover:text-brand-600">
               Home
             </Link>
-            <Link to="/cardapio" className="rounded-full bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
-              Ver cardápio
+            <Link
+              to="/cardapio"
+              className="rounded-full bg-brand-600 px-4 py-2 text-white hover:bg-brand-700"
+            >
+              Ver meu cardápio
             </Link>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="rounded-full border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand-600 hover:text-brand-600"
+              >
+                ← Voltar ao Admin
+              </Link>
+            )}
           </div>
         </nav>
       </header>
