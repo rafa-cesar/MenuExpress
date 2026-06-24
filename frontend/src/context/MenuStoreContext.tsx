@@ -2,6 +2,8 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useState } fr
 import { supabase } from '../lib/supabase';
 import { demoCategorias, demoEmpresa, demoMenuItems } from '../data/menu';
 import type { Categoria, Empresa, MenuItem } from '../types/menu';
+import type { EmpresaStatus } from '../types/domain';
+import type { MenuCategory } from '../types/menu';
 
 const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
@@ -24,6 +26,8 @@ function mapEmpresa(row: Record<string, unknown>): Empresa {
   return {
     id: row.id as string,
     nome: row.nome as string,
+    slug: (row.slug as string) ?? '',
+    status: (row.status as EmpresaStatus) ?? 'ativa',
     descricao: row.descricao as string,
     cidade: row.cidade as string,
     whatsapp: row.whatsapp as string,
@@ -57,7 +61,7 @@ function mapProduto(row: Record<string, unknown>): MenuItem {
     nome: row.nome as string,
     descricao: row.descricao as string,
     preco: Number(row.preco),
-    categoria: row.categoria as string,
+    categoria: row.categoria as MenuCategory,
     imagem: row.imagem as string,
     destaque: Boolean(row.destaque),
     disponivel: Boolean(row.disponivel),
