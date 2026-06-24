@@ -6,7 +6,7 @@ import { useBrand } from '../hooks/useBrand';
 import { buildWhatsAppOrderUrl, menuCatalogService } from '../services';
 import { pedidosService } from '../services/pedidosService';
 import type { CartItem, MenuCategory, MenuItem } from '../types/menu';
-import type { ModalidadeEntrega } from '../types/domain';
+import type { ModalidadeEntrega, Pedido } from '../types/domain';
 import { useMenuStore } from '../context/MenuStoreContext';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -17,6 +17,95 @@ const MOTIVO_LABEL: Record<string, string> = {
   dia_inativo: 'Não abrimos neste dia da semana.',
 };
 
+// ─── Tela de confirmação pós-pedido ─────────────────────────────────────
+function ConfirmacaoScreen({
+  pedido, empresa, whatsappMsg, whatsapp, brand, onNovoPedido,
+}: {
+  pedido: Pedido;
+  empresa: ReturnType<typeof useMenuStore>['empresa'];
+  whatsappMsg: string;
+  whatsapp: string;
+  brand: ReturnType<typeof useBrand>;
+  onNovoPedido: () => void;
+}) {
+  const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
+
+  return (
+    <section className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl text-center">
+
+        {/* Ícone */}
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl">
+          ✅
+        </div>
+
+        <h1 className="mt-6 text-3xl font-black text-slate-950">Pedido recebido!</h1>
+        <p className="mt-2 text-slate-500">
+          Seu pedido foi registrado com sucesso.
+        </p>
+
+        {/* Número do pedido */}
+        <div className="mt-6 rounded-2xl border-2 border-dashed px-6 py-5" style={{ borderColor: brand.primary }}>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Número do pedido</p>
+          <p className="mt-1 text-5xl font-black" style={{ color: brand.primary }}>
+            #{String(pedido.numero).padStart(4, '0')}
+          </p>
+        </div>
+
+        {/* Resumo */}
+        <div className="mt-6 space-y-2 rounded-2xl bg-slate-50 px-5 py-4 text-left">
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Modalidade</span>
+            <span className="font-bold text-slate-800">{pedido.modalidade === 'entrega' ? '🚚 Entrega' : '🏠 Retirada'}</span>
+          </div>
+          {pedido.clienteNome && (
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Nome</span>
+              <span className="font-bold text-slate-800">{pedido.clienteNome}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-t border-slate-200 pt-2 text-sm">
+            <span className="font-black text-slate-900">Total pago</span>
+            <span className="font-black" style={{ color: brand.primary }}>{fmt.format(pedido.total)}</span>
+          </div>
+        </div>
+
+        <p className="mt-5 text-sm text-slate-400">
+          Acompanhe seu pedido com o número acima.
+          <br /><strong className="text-slate-600">{empresa.nome}</strong> já foi notificado.
+        </p>
+
+        {/* WhatsApp opcional */}
+        {whatsapp && (
+          <a
+            href={buildWhatsAppOrderUrl(whatsapp, whatsappMsg)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-6 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.528 5.855L0 24l6.335-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.371l-.36-.214-3.724.887.924-3.619-.235-.372A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+            </svg>
+            Confirmar pelo WhatsApp (opcional)
+          </a>
+        )}
+
+        {/* Novo pedido */}
+        <button
+          type="button"
+          onClick={onNovoPedido}
+          className="mt-3 w-full rounded-full py-3.5 font-black text-white transition"
+          style={btnStyle}
+        >
+          Fazer novo pedido
+        </button>
+      </div>
+    </section>
+  );
+}
+
+// ─── Página principal ───────────────────────────────────────────────────────
 export function MenuPage() {
   usePageTitle('Cardápio');
   const menuCatalog = menuCatalogService.getDemoCatalog();
@@ -30,26 +119,31 @@ export function MenuPage() {
   const defaultModalidade: ModalidadeEntrega = cfg.entregaAtiva && !cfg.retiradaAtiva ? 'entrega' : 'retirada';
 
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory>('Promoções');
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [orderNote, setOrderNote] = useState('');
-  const [checkoutMessage, setCheckoutMessage] = useState('');
-  const [modalidade, setModalidade] = useState<ModalidadeEntrega>(defaultModalidade);
-  const [clienteNome, setClienteNome] = useState('');
-  const [clienteTel, setClienteTel] = useState('');
-  const [clienteEnd, setClienteEnd] = useState('');
-  const [salvando, setSalvando] = useState(false);
+  const [cartItems, setCartItems]               = useState<CartItem[]>([]);
+  const [orderNote, setOrderNote]               = useState('');
+  const [checkoutMessage, setCheckoutMessage]   = useState('');
+  const [modalidade, setModalidade]             = useState<ModalidadeEntrega>(defaultModalidade);
+  const [clienteNome, setClienteNome]           = useState('');
+  const [clienteTel, setClienteTel]             = useState('');
+  const [clienteEnd, setClienteEnd]             = useState('');
+  const [salvando, setSalvando]                 = useState(false);
+  const [pedidoFeito, setPedidoFeito]           = useState<Pedido | null>(null);
 
   const filteredItems = useMemo(() => produtos.filter((item) => item.categoria === selectedCategory), [produtos, selectedCategory]);
-  const subtotal = useMemo(() => cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0), [cartItems]);
-  const taxa = modalidade === 'entrega' && cfg.entregaAtiva ? cfg.taxaEntregaFixa : 0;
-  const total = subtotal + taxa;
-  const totalItems = useMemo(() => cartItems.reduce((t, i) => t + i.quantity, 0), [cartItems]);
+  const subtotal      = useMemo(() => cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0), [cartItems]);
+  const taxa          = modalidade === 'entrega' && cfg.entregaAtiva ? cfg.taxaEntregaFixa : 0;
+  const total         = subtotal + taxa;
+  const totalItems    = useMemo(() => cartItems.reduce((t, i) => t + i.quantity, 0), [cartItems]);
   const abaixoDoMinimo = modalidade === 'entrega' && cfg.pedidoMinimoEntrega > 0 && subtotal < cfg.pedidoMinimoEntrega;
 
   function getQty(id: string) { return cartItems.find((i) => i.product.id === id)?.quantity ?? 0; }
   function addProduct(product: MenuItem) {
     if (!storeStatus.aberta) return;
-    setCartItems((cur) => cur.some((i) => i.product.id === product.id) ? cur.map((i) => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i) : [...cur, { product, quantity: 1 }]);
+    setCartItems((cur) =>
+      cur.some((i) => i.product.id === product.id)
+        ? cur.map((i) => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
+        : [...cur, { product, quantity: 1 }]
+    );
   }
   function inc(id: string) { setCartItems((cur) => cur.map((i) => i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i)); }
   function dec(id: string) { setCartItems((cur) => cur.map((i) => i.product.id === id ? { ...i, quantity: i.quantity - 1 } : i).filter((i) => i.quantity > 0)); }
@@ -57,7 +151,9 @@ export function MenuPage() {
 
   function buildMsg() {
     const itens = cartItems.map((i) => `• ${i.product.nome} x${i.quantity} — ${fmt.format(i.product.preco * i.quantity)}`).join('\n');
-    const endLoja = cfg.endereco ? `${cfg.endereco.rua}, ${cfg.endereco.numero}${cfg.endereco.complemento ? ` (${cfg.endereco.complemento})` : ''} — ${cfg.endereco.bairro}, ${cfg.endereco.cidade}` : 'Consultar endereço';
+    const endLoja = cfg.endereco
+      ? `${cfg.endereco.rua}, ${cfg.endereco.numero}${cfg.endereco.complemento ? ` (${cfg.endereco.complemento})` : ''} — ${cfg.endereco.bairro}, ${cfg.endereco.cidade}`
+      : 'Consultar endereço';
     const linhasEntrega = modalidade === 'entrega'
       ? [`📍 Endereço de entrega: ${clienteEnd || '(não informado)'}`, `🚚 Taxa de entrega: ${fmt.format(taxa)}`]
       : [`🏠 Modalidade: Retirada no local`, `📌 Endereço da loja: ${endLoja}`];
@@ -87,13 +183,17 @@ export function MenuPage() {
     setCheckoutMessage('');
     setSalvando(true);
 
-    // Salva no banco antes de abrir o WhatsApp
-    await pedidosService.criar({
+    const pedido = await pedidosService.criar({
       modalidade,
       clienteNome,
       clienteTel,
       clienteEnd,
-      itens: cartItems.map((i) => ({ nome: i.product.nome, quantidade: i.quantity, precoUnitario: i.product.preco, subtotal: i.product.preco * i.quantity })),
+      itens: cartItems.map((i) => ({
+        nome: i.product.nome,
+        quantidade: i.quantity,
+        precoUnitario: i.product.preco,
+        subtotal: i.product.preco * i.quantity,
+      })),
       observacao: orderNote,
       subtotal,
       taxaEntrega: taxa,
@@ -101,10 +201,42 @@ export function MenuPage() {
     });
 
     setSalvando(false);
-    window.open(buildWhatsAppOrderUrl(empresa.whatsapp, buildMsg()), '_blank', 'noopener,noreferrer');
+
+    if (!pedido) {
+      setCheckoutMessage('Erro ao registrar pedido. Tente novamente.');
+      return;
+    }
+
+    // Sucesso — mostra tela de confirmação
+    setPedidoFeito(pedido);
+  }
+
+  function handleNovoPedido() {
+    setPedidoFeito(null);
+    setCartItems([]);
+    setOrderNote('');
+    setClienteNome('');
+    setClienteTel('');
+    setClienteEnd('');
+    setCheckoutMessage('');
+    setSelectedCategory('Promoções');
   }
 
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
+
+  // ─── Tela de confirmação ───
+  if (pedidoFeito) {
+    return (
+      <ConfirmacaoScreen
+        pedido={pedidoFeito}
+        empresa={empresa}
+        whatsappMsg={buildMsg()}
+        whatsapp={empresa.whatsapp}
+        brand={brand}
+        onNovoPedido={handleNovoPedido}
+      />
+    );
+  }
 
   return (
     <section className="bg-slate-50 pb-72 lg:pb-12">
@@ -139,8 +271,10 @@ export function MenuPage() {
               <p className="text-sm font-semibold text-white/80">Seu pedido</p>
               <p className="mt-3 text-3xl font-black">{fmt.format(total)}</p>
               <p className="mt-1 text-xs text-white/60">{totalItems} item(ns) · {taxa > 0 ? `+ ${fmt.format(taxa)} entrega` : 'sem taxa'}</p>
-              <button type="button" onClick={handleCheckout} disabled={!storeStatus.aberta || salvando} className="mt-5 w-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50" style={btnStyle}>
-                {salvando ? 'Registrando...' : storeStatus.aberta ? 'Finalizar Pedido' : 'Loja Fechada'}
+              <button type="button" onClick={handleCheckout} disabled={!storeStatus.aberta || salvando}
+                className="mt-5 w-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
+                style={btnStyle}>
+                {salvando ? 'Registrando pedido...' : storeStatus.aberta ? 'Fazer Pedido' : 'Loja Fechada'}
               </button>
             </div>
           </div>
@@ -152,7 +286,8 @@ export function MenuPage() {
             {menuCategories.map((category) => {
               const isActive = selectedCategory === category;
               return (
-                <button key={category} type="button" onClick={() => setSelectedCategory(category)} className="shrink-0 px-4 py-2 text-sm font-black transition"
+                <button key={category} type="button" onClick={() => setSelectedCategory(category)}
+                  className="shrink-0 px-4 py-2 text-sm font-black transition"
                   style={isActive ? { ...btnStyle, boxShadow: `0 4px 20px ${brand.primary}44` } : { backgroundColor: '#fff', color: '#334155', borderRadius: brand.buttonRadius }}>
                   {category}
                 </button>
@@ -180,23 +315,42 @@ export function MenuPage() {
             </div>
           </div>
           <aside className="hidden h-fit lg:sticky lg:top-24 lg:block">
-            <CartPanel cartItems={cartItems} subtotal={subtotal} taxa={taxa} total={total} orderNote={orderNote} checkoutMessage={checkoutMessage} storeAberta={storeStatus.aberta} brand={brand} modalidade={modalidade} ambasAtivas={ambasAtivas} cfg={cfg} abaixoDoMinimo={abaixoDoMinimo} salvando={salvando} clienteNome={clienteNome} clienteTel={clienteTel} clienteEnd={clienteEnd} onModalidade={setModalidade} onNome={setClienteNome} onTel={setClienteTel} onEnd={setClienteEnd} onOrderNoteChange={setOrderNote} onCheckout={handleCheckout} onIncrement={inc} onDecrement={dec} onRemove={rem} />
+            <CartPanel
+              cartItems={cartItems} subtotal={subtotal} taxa={taxa} total={total}
+              orderNote={orderNote} checkoutMessage={checkoutMessage}
+              storeAberta={storeStatus.aberta} brand={brand} modalidade={modalidade}
+              ambasAtivas={ambasAtivas} cfg={cfg} abaixoDoMinimo={abaixoDoMinimo}
+              salvando={salvando} clienteNome={clienteNome} clienteTel={clienteTel} clienteEnd={clienteEnd}
+              onModalidade={setModalidade} onNome={setClienteNome} onTel={setClienteTel} onEnd={setClienteEnd}
+              onOrderNoteChange={setOrderNote} onCheckout={handleCheckout}
+              onIncrement={inc} onDecrement={dec} onRemove={rem}
+            />
           </aside>
         </div>
       </div>
 
       {/* Mobile cart */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-4 shadow-[0_-12px_40px_rgba(15,23,42,0.16)] lg:hidden">
-        <CartPanel compact cartItems={cartItems} subtotal={subtotal} taxa={taxa} total={total} orderNote={orderNote} checkoutMessage={checkoutMessage} storeAberta={storeStatus.aberta} brand={brand} modalidade={modalidade} ambasAtivas={ambasAtivas} cfg={cfg} abaixoDoMinimo={abaixoDoMinimo} salvando={salvando} clienteNome={clienteNome} clienteTel={clienteTel} clienteEnd={clienteEnd} onModalidade={setModalidade} onNome={setClienteNome} onTel={setClienteTel} onEnd={setClienteEnd} onOrderNoteChange={setOrderNote} onCheckout={handleCheckout} onIncrement={inc} onDecrement={dec} onRemove={rem} />
+        <CartPanel compact
+          cartItems={cartItems} subtotal={subtotal} taxa={taxa} total={total}
+          orderNote={orderNote} checkoutMessage={checkoutMessage}
+          storeAberta={storeStatus.aberta} brand={brand} modalidade={modalidade}
+          ambasAtivas={ambasAtivas} cfg={cfg} abaixoDoMinimo={abaixoDoMinimo}
+          salvando={salvando} clienteNome={clienteNome} clienteTel={clienteTel} clienteEnd={clienteEnd}
+          onModalidade={setModalidade} onNome={setClienteNome} onTel={setClienteTel} onEnd={setClienteEnd}
+          onOrderNoteChange={setOrderNote} onCheckout={handleCheckout}
+          onIncrement={inc} onDecrement={dec} onRemove={rem}
+        />
       </div>
 
       <div className="px-4 pb-6 pt-8 text-center text-xs text-slate-400">
-        Powered by <strong>Yellow Tech</strong> — MenuExpress
+        Powered by <strong>MenuExpress</strong>
       </div>
     </section>
   );
 }
 
+// ─── CartPanel ───────────────────────────────────────────────────────────────────
 type CartPanelProps = {
   cartItems: CartItem[]; subtotal: number; taxa: number; total: number;
   orderNote: string; checkoutMessage: string; storeAberta: boolean;
@@ -230,16 +384,28 @@ function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessag
           ))}
         </div>
       )}
-      {!ambasAtivas && <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{modalidade === 'retirada' ? '🏠 Retirada no local' : '🚚 Entrega em domicílio'}</div>}
-      {abaixoDoMinimo && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">⚠️ Mínimo para entrega: {fmt.format(cfg.pedidoMinimoEntrega)}. Faltam {fmt.format(cfg.pedidoMinimoEntrega - subtotal)}.</p>}
+      {!ambasAtivas && (
+        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">
+          {modalidade === 'retirada' ? '🏠 Retirada no local' : '🚚 Entrega em domicílio'}
+        </div>
+      )}
+      {abaixoDoMinimo && (
+        <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">
+          ⚠️ Mínimo para entrega: {fmt.format(cfg.pedidoMinimoEntrega)}. Faltam {fmt.format(cfg.pedidoMinimoEntrega - subtotal)}.
+        </p>
+      )}
       {!compact && (
         <>
           <div className="mt-4 space-y-3">
-            {cartItems.length === 0 ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">{storeAberta ? 'Seu carrinho está vazio.' : '🔴 Loja fechada.'}</p>
+            {cartItems.length === 0
+              ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">{storeAberta ? 'Seu carrinho está vazio.' : '🔴 Loja fechada.'}</p>
               : cartItems.map((item) => (
                 <div key={item.product.id} className="rounded-2xl border border-slate-100 p-4">
                   <div className="flex justify-between gap-3">
-                    <div><p className="font-black text-slate-950">{item.product.nome}</p><p className="text-sm text-slate-500">{fmt.format(item.product.preco)}</p></div>
+                    <div>
+                      <p className="font-black text-slate-950">{item.product.nome}</p>
+                      <p className="text-sm text-slate-500">{fmt.format(item.product.preco)}</p>
+                    </div>
                     <button type="button" onClick={() => onRemove(item.product.id)} className="text-xs font-bold text-red-500 hover:text-red-600">Remover</button>
                   </div>
                   <div className="mt-3 flex items-center justify-between">
@@ -255,9 +421,17 @@ function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessag
           </div>
           <div className="mt-4 space-y-3">
             <p className="text-sm font-black text-slate-700">Seus dados</p>
-            <label className="block text-sm font-bold text-slate-600">Nome<input value={clienteNome} onChange={(e) => onNome(e.target.value)} placeholder="Seu nome" className={inputClass} /></label>
-            <label className="block text-sm font-bold text-slate-600">Telefone<input value={clienteTel} onChange={(e) => onTel(e.target.value)} placeholder="(11) 99999-9999" className={inputClass} /></label>
-            {modalidade === 'entrega' && <label className="block text-sm font-bold text-slate-600">Endereço de entrega<input value={clienteEnd} onChange={(e) => onEnd(e.target.value)} placeholder="Rua, número, bairro" className={inputClass} /></label>}
+            <label className="block text-sm font-bold text-slate-600">Nome
+              <input value={clienteNome} onChange={(e) => onNome(e.target.value)} placeholder="Seu nome" className={inputClass} />
+            </label>
+            <label className="block text-sm font-bold text-slate-600">Telefone
+              <input value={clienteTel} onChange={(e) => onTel(e.target.value)} placeholder="(11) 99999-9999" className={inputClass} />
+            </label>
+            {modalidade === 'entrega' && (
+              <label className="block text-sm font-bold text-slate-600">Endereço de entrega
+                <input value={clienteEnd} onChange={(e) => onEnd(e.target.value)} placeholder="Rua, número, bairro" className={inputClass} />
+              </label>
+            )}
             {modalidade === 'retirada' && cfg.endereco && (
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <p className="text-xs font-black text-slate-600">📌 Endereço para retirada</p>
@@ -283,9 +457,13 @@ function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessag
           <div className="text-center"><p className="text-xs text-slate-400">Total</p><p className="font-black" style={{ color: brand.primary }}>{fmt.format(total)}</p></div>
         </div>
       )}
-      {checkoutMessage && <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{checkoutMessage}</p>}
-      <button type="button" onClick={onCheckout} disabled={!storeAberta || abaixoDoMinimo || salvando} className="mt-4 w-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50" style={btnStyle}>
-        {salvando ? 'Registrando...' : storeAberta ? 'Finalizar no WhatsApp' : '🔴 Loja Fechada'}
+      {checkoutMessage && (
+        <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{checkoutMessage}</p>
+      )}
+      <button type="button" onClick={onCheckout} disabled={!storeAberta || abaixoDoMinimo || salvando}
+        className="mt-4 w-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
+        style={btnStyle}>
+        {salvando ? 'Registrando pedido...' : storeAberta ? 'Fazer Pedido' : '🔴 Loja Fechada'}
       </button>
     </div>
   );
