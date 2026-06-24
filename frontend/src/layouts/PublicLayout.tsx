@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const STANDALONE_ROUTES = ['/', '/assinar', '/login'];
+const STANDALONE_ROUTES = ['/', '/assinar', '/login', '/cadastro'];
 
 export function PublicLayout() {
   const { pathname } = useLocation();
@@ -14,24 +14,20 @@ export function PublicLayout() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Área admin: sem layout público
   if (pathname.startsWith('/admin')) return <Outlet />;
-
-  // Landing, Assinar, Login: têm layout próprio
   if (STANDALONE_ROUTES.includes(pathname)) return <Outlet />;
 
-  // Demais rotas públicas (/cardapio etc): nav + footer compartilhados
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link to="/" className="text-xl font-black tracking-tight text-slate-950">
-            Menu<span className="text-brand-600">Express</span>
+          <Link to="/" className="text-xl font-black tracking-tight">
+            <span className="text-slate-950">Menu</span><span className="text-brand-600">Express</span>
           </Link>
           <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
             <Link to="/" className="hover:text-brand-600">Home</Link>
             <Link to="/cardapio" className="rounded-full bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">
-              Ver meu cardápio
+              Ver cardápio
             </Link>
             {isAdmin && (
               <Link to="/admin" className="rounded-full border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand-600 hover:text-brand-600">
@@ -44,8 +40,7 @@ export function PublicLayout() {
       <main><Outlet /></main>
       <footer className="border-t border-slate-200 bg-white py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-1 px-4 text-sm text-slate-500 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
-          <span>© {new Date().getFullYear()} <strong className="text-slate-700">Yellow Tech</strong>. Todos os direitos reservados.</span>
-          <span className="text-xs text-slate-400">MenuExpress — plataforma de cardápios digitais</span>
+          <span>© {new Date().getFullYear()} <strong className="text-slate-700">MenuExpress</strong>. Todos os direitos reservados.</span>
         </div>
       </footer>
     </div>
