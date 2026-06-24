@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { MenuCard } from '../components/MenuCard';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useStoreStatus } from '../hooks/useStoreStatus';
 import { buildWhatsAppOrderUrl, menuCatalogService } from '../services';
 import type { CartItem, MenuCategory, MenuItem } from '../types/menu';
 import { useMenuStore } from '../context/MenuStoreContext';
@@ -10,6 +11,12 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
+const MOTIVO_LABEL: Record<string, string> = {
+  forcar_fechado: 'A loja está temporariamente fechada.',
+  horario_fechado: 'A loja está fechada no momento. Confira nosso horário de funcionamento.',
+  dia_inativo: 'Não abrimos neste dia da semana.',
+};
+
 export function MenuPage() {
   usePageTitle('Cardápio');
 
@@ -17,6 +24,7 @@ export function MenuPage() {
   const { categoriasNomes: menuCategories } = menuCatalog;
 
   const { empresa, produtos } = useMenuStore();
+  const storeStatus = useStoreStatus();
 
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory>('Promoções');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -43,15 +51,14 @@ export function MenuPage() {
   }
 
   function addProduct(product: MenuItem) {
+    if (!storeStatus.aberta) return;
     setCartItems((currentItems) => {
-      const productAlreadyInCart = currentItems.some((item) => item.product.id === product.id);
-
-      if (productAlreadyInCart) {
+      const exists = currentItems.some((item) => item.product.id === product.id);
+      if (exists) {
         return currentItems.map((item) =>
           item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item,
         );
       }
-
       return [...currentItems, { product, quantity: 1 }];
     });
   }
@@ -111,11 +118,14 @@ export function MenuPage() {
   }
 
   function handleCheckout() {
+    if (!storeStatus.aberta) {
+      setCheckoutMessage(MOTIVO_LABEL[storeStatus.motivo] ?? 'A loja está fechada no momento.');
+      return;
+    }
     if (cartItems.length === 0) {
       setCheckoutMessage('Adicione pelo menos um produto ao carrinho antes de finalizar o pedido.');
       return;
     }
-
     setCheckoutMessage('');
     const whatsappUrl = buildWhatsAppOrderUrl(empresa.whatsapp, buildCheckoutMessage());
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -124,10 +134,38 @@ export function MenuPage() {
   return (
     <section className="bg-slate-50 pb-72 lg:pb-12">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+
+        {/* Banner de loja fechada */}
+        {!storeStatus.aberta && (
+          <div className="mb-4 rounded-2xl bg-red-50 border border-red-200 px-5 py-4">
+            <p className="text-sm font-black text-red-700">
+              🔴 {MOTIVO_LABEL[storeStatus.motivo] ?? 'Loja fechada no momento.'}
+            </p>
+            {storeStatus.mensagem && (
+              <p className="mt-1 text-sm text-red-600">{storeStatus.mensagem}</p>
+            )}
+          </div>
+        )}
+
+        {/* Banner de mensagem ao cliente (loja aberta com aviso) */}
+        {storeStatus.aberta && storeStatus.mensagem && (
+          <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4">
+            <p className="text-sm font-black text-amber-700">⚠️ Aviso</p>
+            <p className="mt-1 text-sm text-amber-600">{storeStatus.mensagem}</p>
+          </div>
+        )}
+
         <div className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-2xl">
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.25em] text-brand-100">Cardápio digital</p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-brand-100">Cardápio digital</p>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${
+                  storeStatus.aberta ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
+                }`}>
+                  {storeStatus.aberta ? '🟢 Aberta' : '🔴 Fechada'}
+                </span>
+              </div>
               <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">{empresa.nome}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">{empresa.descricao}</p>
               <p className="mt-4 text-sm font-semibold text-slate-300">📍 {empresa.cidade}</p>
@@ -139,9 +177,10 @@ export function MenuPage() {
               <button
                 type="button"
                 onClick={handleCheckout}
-                className="mt-5 w-full rounded-full bg-brand-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-brand-600"
+                disabled={!storeStatus.aberta}
+                className="mt-5 w-full rounded-full bg-brand-500 px-5 py-3 text-center text-sm font-black text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Finalizar Pedido
+                {storeStatus.aberta ? 'Finalizar Pedido' : 'Loja Fechada'}
               </button>
             </div>
           </div>
@@ -151,7 +190,6 @@ export function MenuPage() {
           <div className="flex gap-2 overflow-x-auto pb-1 sm:justify-center sm:pb-0">
             {menuCategories.map((category) => {
               const isActive = selectedCategory === category;
-
               return (
                 <button
                   key={category}
@@ -186,9 +224,10 @@ export function MenuPage() {
                   key={item.id}
                   item={item}
                   quantity={getProductQuantity(item.id)}
-                  onAdd={addProduct}
+                  onAdd={storeStatus.aberta ? addProduct : () => {}}
                   onIncrement={incrementProduct}
                   onDecrement={decrementProduct}
+                  disabled={!storeStatus.aberta}
                 />
               ))}
             </div>
@@ -200,6 +239,7 @@ export function MenuPage() {
               subtotal={subtotal}
               orderNote={orderNote}
               checkoutMessage={checkoutMessage}
+              storeAberta={storeStatus.aberta}
               onOrderNoteChange={setOrderNote}
               onCheckout={handleCheckout}
               onIncrement={incrementProduct}
@@ -216,6 +256,7 @@ export function MenuPage() {
           subtotal={subtotal}
           orderNote={orderNote}
           checkoutMessage={checkoutMessage}
+          storeAberta={storeStatus.aberta}
           onOrderNoteChange={setOrderNote}
           onCheckout={handleCheckout}
           onIncrement={incrementProduct}
@@ -228,13 +269,12 @@ export function MenuPage() {
   );
 }
 
-// CartSummary igual ao original
-
 type CartSummaryProps = {
   cartItems: CartItem[];
   subtotal: number;
   orderNote: string;
   checkoutMessage: string;
+  storeAberta: boolean;
   compact?: boolean;
   onOrderNoteChange: (value: string) => void;
   onCheckout: () => void;
@@ -248,6 +288,7 @@ function CartSummary({
   subtotal,
   orderNote,
   checkoutMessage,
+  storeAberta,
   compact = false,
   onOrderNoteChange,
   onCheckout,
@@ -269,7 +310,9 @@ function CartSummary({
         <div className="mt-5 space-y-4">
           {cartItems.length === 0 ? (
             <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-              Seu carrinho está vazio. Adicione produtos para montar o pedido.
+              {storeAberta
+                ? 'Seu carrinho está vazio. Adicione produtos para montar o pedido.'
+                : '🔴 A loja está fechada. Você pode visualizar o cardápio, mas não é possível fazer pedidos agora.'}
             </p>
           ) : (
             cartItems.map((item) => (
@@ -333,8 +376,9 @@ function CartSummary({
             <textarea
               value={orderNote}
               onChange={(event) => onOrderNoteChange(event.target.value)}
-              placeholder="Ex: Tirar a cebola, maionese à parte, ponto da carne..."
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-500"
+              disabled={!storeAberta}
+              placeholder={storeAberta ? 'Ex: Tirar a cebola, maionese à parte, ponto da carne...' : 'Loja fechada no momento.'}
+              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-brand-500 disabled:bg-slate-50 disabled:text-slate-400"
             />
           </label>
         ) : null}
@@ -346,9 +390,10 @@ function CartSummary({
         <button
           type="button"
           onClick={onCheckout}
-          className="w-full rounded-full bg-brand-600 px-5 py-3 text-sm font-black text-white hover:bg-brand-700"
+          disabled={!storeAberta}
+          className="w-full rounded-full bg-brand-600 px-5 py-3 text-sm font-black text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Finalizar Pedido no WhatsApp
+          {storeAberta ? 'Finalizar Pedido no WhatsApp' : '🔴 Loja Fechada'}
         </button>
       </div>
     </div>
