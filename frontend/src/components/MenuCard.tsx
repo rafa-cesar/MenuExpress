@@ -3,6 +3,7 @@ import type { MenuItem } from '../types/menu';
 type MenuCardProps = {
   item: MenuItem;
   quantity: number;
+  disabled?: boolean;
   onAdd: (item: MenuItem) => void;
   onIncrement: (itemId: string) => void;
   onDecrement: (itemId: string) => void;
@@ -13,9 +14,11 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
-export function MenuCard({ item, quantity, onAdd, onIncrement, onDecrement }: MenuCardProps) {
+export function MenuCard({ item, quantity, disabled = false, onAdd, onIncrement, onDecrement }: MenuCardProps) {
   return (
-    <article className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+    <article className={`overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
+      disabled ? 'opacity-60' : ''
+    }`}>
       <div className="relative h-40 bg-slate-200">
         <img src={item.imagem} alt={item.nome} className="h-full w-full object-cover" loading="lazy" />
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent" />
@@ -34,7 +37,7 @@ export function MenuCard({ item, quantity, onAdd, onIncrement, onDecrement }: Me
         <div className="mt-5 flex items-center justify-between gap-3">
           <p className="text-2xl font-black text-slate-950">{currencyFormatter.format(item.preco)}</p>
 
-          {quantity > 0 ? (
+          {quantity > 0 && !disabled ? (
             <div className="flex items-center rounded-full border border-slate-200 bg-slate-50 p-1">
               <button
                 type="button"
@@ -57,10 +60,11 @@ export function MenuCard({ item, quantity, onAdd, onIncrement, onDecrement }: Me
           ) : (
             <button
               type="button"
-              onClick={() => onAdd(item)}
-              className="rounded-full bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-brand-600"
+              onClick={() => !disabled && onAdd(item)}
+              disabled={disabled}
+              className="rounded-full bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
             >
-              Adicionar
+              {disabled ? 'Fechado' : 'Adicionar'}
             </button>
           )}
         </div>
