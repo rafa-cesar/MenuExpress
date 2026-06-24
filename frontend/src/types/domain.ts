@@ -3,6 +3,7 @@ export type PedidoStatus = 'rascunho' | 'enviado' | 'confirmado' | 'cancelado';
 export type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 export type EstiloVisual = 'moderno' | 'clean' | 'vibrante' | 'classico';
+export type ModalidadeEntrega = 'retirada' | 'entrega';
 
 export interface HorarioDia {
   ativo: boolean;
@@ -16,6 +17,22 @@ export interface HorarioFuncionamento {
   status: StatusLoja;
   dias: HorarioDias;
   mensagemCliente?: string;
+}
+
+export interface EnderecoLoja {
+  rua: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  complemento?: string;
+}
+
+export interface ConfigEntrega {
+  retiradaAtiva: boolean;
+  entregaAtiva: boolean;
+  taxaEntregaFixa: number;
+  pedidoMinimoEntrega: number;
+  endereco?: EnderecoLoja;
 }
 
 export interface Empresa {
@@ -32,6 +49,7 @@ export interface Empresa {
   taxaEntrega: number;
   pedidoMinimo: number;
   horario: HorarioFuncionamento;
+  entrega?: ConfigEntrega;
 }
 
 export interface Categoria {
