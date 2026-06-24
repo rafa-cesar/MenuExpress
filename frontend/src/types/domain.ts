@@ -1,5 +1,5 @@
 export type EmpresaStatus = 'ativa' | 'inativa';
-export type PedidoStatus = 'rascunho' | 'enviado' | 'confirmado' | 'cancelado';
+export type PedidoStatus = 'novo' | 'em_preparo' | 'pronto' | 'entregue' | 'cancelado';
 export type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 export type EstiloVisual = 'moderno' | 'clean' | 'vibrante' | 'classico';
@@ -74,14 +74,7 @@ export interface Produto {
   disponivel: boolean;
 }
 
-export interface Cliente {
-  nome: string;
-  telefone?: string;
-  endereco?: string;
-}
-
 export interface PedidoItem {
-  produtoId: string;
   nome: string;
   quantidade: number;
   precoUnitario: number;
@@ -91,12 +84,23 @@ export interface PedidoItem {
 export interface Pedido {
   id: string;
   empresaId: string;
-  cliente?: Cliente;
+  numero: number;
+  status: PedidoStatus;
+  modalidade: ModalidadeEntrega;
+  clienteNome?: string;
+  clienteTel?: string;
+  clienteEnd?: string;
   itens: PedidoItem[];
   observacao?: string;
+  subtotal: number;
+  taxaEntrega: number;
   total: number;
-  formaPagamento?: string;
-  trocoPara?: number;
-  status: PedidoStatus;
   criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface Cliente {
+  nome: string;
+  telefone?: string;
+  endereco?: string;
 }

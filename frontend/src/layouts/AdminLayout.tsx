@@ -4,10 +4,11 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 
 const navItems = [
-  { to: '/admin',               label: 'Dashboard',      exact: true,  icon: '📊' },
-  { to: '/admin/produtos',      label: 'Produtos',       exact: false, icon: '🍔' },
-  { to: '/admin/categorias',    label: 'Categorias',     exact: false, icon: '📋' },
-  { to: '/admin/configuracoes', label: 'Configurações',  exact: false, icon: '⚙️' },
+  { to: '/admin',               label: 'Dashboard',  exact: true,  icon: '📊' },
+  { to: '/admin/pedidos',       label: 'Pedidos',    exact: false, icon: '🛒' },
+  { to: '/admin/produtos',      label: 'Produtos',   exact: false, icon: '🍔' },
+  { to: '/admin/categorias',    label: 'Categorias', exact: false, icon: '📋' },
+  { to: '/admin/configuracoes', label: 'Config.',    exact: false, icon: '⚙️' },
 ];
 
 export function AdminLayout() {
@@ -40,132 +41,99 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-slate-50">
 
-      {/* ── TOP NAV ── */}
+      {/* TOP NAV */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
-
-          {/* Logo */}
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
           <Link to="/admin" className="shrink-0 py-4 text-xl font-black tracking-tight text-slate-950">
             Yellow<span className="text-yellow-400">Tech</span>
           </Link>
-
-          {/* Divider */}
           <span className="hidden h-5 w-px bg-slate-200 lg:block" />
           <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 lg:block">MenuExpress</span>
 
-          {/* Desktop nav links */}
+          {/* Desktop nav */}
           <nav className="hidden flex-1 items-center gap-1 lg:flex">
             {navItems.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
+              <Link key={item.to} to={item.to}
                 activeOptions={item.exact ? { exact: true } : undefined}
                 className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                 activeProps={{ className: 'rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white' }}
               >
-                {item.label}
+                {item.icon} {item.label}
               </Link>
             ))}
           </nav>
 
-          {/* Desktop right actions */}
+          {/* Desktop right */}
           <div className="ml-auto hidden items-center gap-3 lg:flex">
-            <a
-              href="/cardapio"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-            >
+            <a href="/cardapio" target="_blank" rel="noopener noreferrer"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
               Ver cardápio ↗
             </a>
             <div className="h-5 w-px bg-slate-200" />
             <p className="max-w-[160px] truncate text-xs text-slate-400">{session.user.email}</p>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-200"
-            >
+            <button type="button" onClick={handleLogout}
+              className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-200">
               Sair
             </button>
           </div>
 
-          {/* Mobile right actions */}
+          {/* Mobile right */}
           <div className="ml-auto flex items-center gap-2 lg:hidden">
-            <a
-              href="/cardapio"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white"
-            >
-              Cardápio ↗
-            </a>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((o) => !o)}
-              className="rounded-xl border border-slate-200 p-2 text-slate-600"
-              aria-label="Menu"
-            >
-              {menuOpen ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-              )}
+            <a href="/cardapio" target="_blank" rel="noopener noreferrer"
+              className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white">Cardápio ↗</a>
+            <button type="button" onClick={() => setMenuOpen((o) => !o)}
+              className="rounded-xl border border-slate-200 p-2 text-slate-600" aria-label="Menu">
+              {menuOpen
+                ? <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                : <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              }
             </button>
           </div>
         </div>
 
-        {/* Mobile dropdown menu */}
+        {/* Mobile dropdown */}
         {menuOpen && (
           <div className="border-t border-slate-100 bg-white px-4 pb-4 lg:hidden">
             <nav className="mt-3 space-y-1">
               {navItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
+                <Link key={item.to} to={item.to}
                   activeOptions={item.exact ? { exact: true } : undefined}
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
                   activeProps={{ className: 'flex items-center gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white' }}
                 >
-                  <span>{item.icon}</span>
-                  {item.label}
+                  <span>{item.icon}</span>{item.label}
                 </Link>
               ))}
             </nav>
-            <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
               <p className="truncate text-xs text-slate-400">{session.user.email}</p>
-              <button type="button" onClick={handleLogout} className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700">
-                Sair
-              </button>
+              <button type="button" onClick={handleLogout} className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700">Sair</button>
             </div>
           </div>
         )}
       </header>
 
-      {/* ── CONTEÚDO ── */}
+      {/* CONTEÚDO */}
       <main className="pb-24 lg:pb-12">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </div>
       </main>
 
-      {/* ── BOTTOM NAV MOBILE ── */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white shadow-[0_-8px_32px_rgba(15,23,42,0.10)] lg:hidden">
+      {/* BOTTOM NAV MOBILE */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white shadow-[0_-8px_32px_rgba(15,23,42,0.10)] lg:hidden">
         {navItems.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
+          <Link key={item.to} to={item.to}
             activeOptions={item.exact ? { exact: true } : undefined}
-            className="flex flex-col items-center gap-1 px-2 py-3 text-slate-400 transition"
-            activeProps={{ className: 'flex flex-col items-center gap-1 px-2 py-3 text-slate-950' }}
+            className="flex flex-col items-center gap-0.5 px-1 py-3 text-slate-400 transition"
+            activeProps={{ className: 'flex flex-col items-center gap-0.5 px-1 py-3 text-slate-950' }}
           >
             <span className="text-lg leading-none">{item.icon}</span>
-            <span className="text-[10px] font-black">{item.label}</span>
-            {/* dot indicator active */}
+            <span className="text-[9px] font-black">{item.label}</span>
           </Link>
         ))}
       </nav>
-
     </div>
   );
 }
