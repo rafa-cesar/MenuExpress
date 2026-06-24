@@ -25,7 +25,6 @@ export function AdminLayout() {
     navigate({ to: '/admin/login' });
   }
 
-  // Enquanto verifica sessão, exibe tela neutra
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950">
@@ -34,16 +33,17 @@ export function AdminLayout() {
     );
   }
 
-  // Sem sessão: não renderiza nada (o useEffect já redireciona)
   if (!session) return null;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-slate-950 px-5 py-6 text-white lg:block">
-        <Link to="/admin" className="text-2xl font-black tracking-tight">
-          Menu<span className="text-brand-500">Express</span>
+      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-white/5 bg-slate-950 px-5 py-6 text-white lg:block">
+        <Link to="/admin" className="block">
+          <p className="text-2xl font-black tracking-tight">
+            Yellow<span className="text-yellow-400">Tech</span>
+          </p>
+          <p className="mt-0.5 text-xs font-bold text-slate-400 tracking-widest uppercase">MenuExpress</p>
         </Link>
-        <p className="mt-2 text-sm text-slate-400">Painel do restaurante</p>
 
         <nav className="mt-8 space-y-2">
           {navigationItems.map((item) => (
@@ -52,7 +52,7 @@ export function AdminLayout() {
               to={item.to}
               activeOptions={item.exact ? { exact: true } : undefined}
               className="block rounded-2xl px-4 py-3 text-sm font-bold text-slate-200 transition hover:bg-white/10 hover:text-white"
-              activeProps={{ className: 'block rounded-2xl bg-brand-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-950/20' }}
+              activeProps={{ className: 'block rounded-2xl bg-yellow-400 px-4 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-yellow-900/20' }}
             >
               {item.label}
             </Link>
@@ -60,7 +60,13 @@ export function AdminLayout() {
         </nav>
 
         <div className="absolute inset-x-5 bottom-6 space-y-3">
-          <div className="rounded-3xl bg-white/10 p-4">
+          <Link
+            to="/cardapio"
+            className="block rounded-2xl border border-white/10 px-4 py-3 text-center text-sm font-black text-slate-300 hover:border-yellow-400/40 hover:text-yellow-400"
+          >
+            Ver cardápio público ↗
+          </Link>
+          <div className="rounded-3xl bg-white/5 p-4">
             <p className="text-sm font-bold text-white">Conectado como</p>
             <p className="mt-1 truncate text-xs text-slate-400">{session.user.email}</p>
           </div>
@@ -77,7 +83,7 @@ export function AdminLayout() {
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-4">
           <Link to="/admin" className="text-xl font-black tracking-tight text-slate-950">
-            Menu<span className="text-brand-600">Express</span>
+            Yellow<span className="text-yellow-400">Tech</span>
           </Link>
           <div className="flex items-center gap-2">
             <Link to="/cardapio" className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
@@ -107,7 +113,7 @@ export function AdminLayout() {
             to={item.to}
             activeOptions={item.exact ? { exact: true } : undefined}
             className="rounded-2xl px-2 py-3 text-center text-xs font-black text-slate-500"
-            activeProps={{ className: 'rounded-2xl bg-brand-100 px-2 py-3 text-center text-xs font-black text-brand-700' }}
+            activeProps={{ className: 'rounded-2xl bg-yellow-100 px-2 py-3 text-center text-xs font-black text-yellow-700' }}
           >
             {item.label}
           </Link>

@@ -34,9 +34,9 @@ export function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <p className="text-3xl font-black tracking-tight text-white">
-            Menu<span className="text-brand-500">Express</span>
+            Yellow<span className="text-yellow-400">Tech</span>
           </p>
-          <p className="mt-2 text-sm text-slate-400">Painel administrativo</p>
+          <p className="mt-2 text-sm text-slate-400">Painel administrativo &mdash; MenuExpress</p>
         </div>
 
         <form
@@ -55,7 +55,7 @@ export function AdminLoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-brand-500"
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-400"
                 placeholder="seu@email.com"
               />
             </label>
@@ -68,7 +68,7 @@ export function AdminLoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-brand-500"
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-yellow-400"
                 placeholder="••••••••"
               />
             </label>
@@ -83,7 +83,7 @@ export function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-6 w-full rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 w-full rounded-full bg-yellow-400 px-5 py-3 font-black text-slate-950 hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>

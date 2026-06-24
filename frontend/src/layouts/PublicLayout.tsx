@@ -54,8 +54,9 @@ export function PublicLayout() {
         <Outlet />
       </main>
       <footer className="border-t border-slate-200 bg-white py-8">
-        <div className="mx-auto max-w-6xl px-4 text-sm text-slate-500 sm:px-6 lg:px-8">
-          © {new Date().getFullYear()} MenuExpress. Base SaaS multiempresa em evolução.
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-1 px-4 text-sm text-slate-500 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
+          <span>© {new Date().getFullYear()} <strong className="text-slate-700">Yellow Tech</strong>. Todos os direitos reservados.</span>
+          <span className="text-xs text-slate-400">MenuExpress &mdash; plataforma de cardápios digitais</span>
         </div>
       </footer>
     </div>
