@@ -18,6 +18,8 @@ function mapPedido(row: Record<string, unknown>): Pedido {
     subtotal: Number(row.subtotal),
     taxaEntrega: Number(row.taxa_entrega),
     total: Number(row.total),
+    estimativaMinutos: row.estimativa_minutos as number | undefined,
+    previsaoEm: row.previsao_em as string | undefined,
     criadoEm: row.criado_em as string,
     atualizadoEm: row.atualizado_em as string,
   };
@@ -39,7 +41,7 @@ export const pedidosService = {
       .from('pedidos')
       .insert({
         empresa_id: EMPRESA_ID,
-        status: 'novo',
+        status: 'aguardando',
         modalidade: pedido.modalidade,
         cliente_nome: pedido.clienteNome || null,
         cliente_tel: pedido.clienteTel || null,
@@ -62,8 +64,7 @@ export const pedidosService = {
       .from('pedidos')
       .select('*')
       .eq('empresa_id', EMPRESA_ID)
-      .not('status', 'eq', 'entregue')
-      .not('status', 'eq', 'cancelado')
+      .not('status', 'in', '("finalizado","cancelado")')
       .order('criado_em', { ascending: true });
 
     if (error) { console.error('[pedidosService.listar]', error); return []; }
@@ -75,7 +76,7 @@ export const pedidosService = {
       .from('pedidos')
       .select('*')
       .eq('empresa_id', EMPRESA_ID)
-      .in('status', ['entregue', 'cancelado'])
+      .in('status', ['finalizado', 'cancelado'])
       .order('criado_em', { ascending: false })
       .limit(50);
 
@@ -83,12 +84,21 @@ export const pedidosService = {
     return (data as Record<string, unknown>[]).map(mapPedido);
   },
 
+  async iniciarPreparo(id: string, estimativaMinutos: number): Promise<boolean> {
+    const previsaoEm = new Date(Date.now() + estimativaMinutos * 60_000).toISOString();
+    const { error } = await supabase
+      .from('pedidos')
+      .update({ status: 'em_preparo', estimativa_minutos: estimativaMinutos, previsao_em: previsaoEm })
+      .eq('id', id);
+    if (error) { console.error('[pedidosService.iniciarPreparo]', error); return false; }
+    return true;
+  },
+
   async atualizarStatus(id: string, status: PedidoStatus): Promise<boolean> {
     const { error } = await supabase
       .from('pedidos')
       .update({ status })
       .eq('id', id);
-
     if (error) { console.error('[pedidosService.atualizarStatus]', error); return false; }
     return true;
   },

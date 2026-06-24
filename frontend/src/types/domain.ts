@@ -1,5 +1,11 @@
 export type EmpresaStatus = 'ativa' | 'inativa';
-export type PedidoStatus = 'novo' | 'em_preparo' | 'pronto' | 'entregue' | 'cancelado';
+export type PedidoStatus =
+  | 'aguardando'
+  | 'em_preparo'
+  | 'pronto_retirada'
+  | 'saiu_entrega'
+  | 'finalizado'
+  | 'cancelado';
 export type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 export type EstiloVisual = 'moderno' | 'clean' | 'vibrante' | 'classico';
@@ -33,6 +39,7 @@ export interface ConfigEntrega {
   taxaEntregaFixa: number;
   pedidoMinimoEntrega: number;
   endereco?: EnderecoLoja;
+  tempoPadraoMinutos?: number; // estimativa padrao de preparo
 }
 
 export interface Empresa {
@@ -95,6 +102,8 @@ export interface Pedido {
   subtotal: number;
   taxaEntrega: number;
   total: number;
+  estimativaMinutos?: number;
+  previsaoEm?: string;
   criadoEm: string;
   atualizadoEm: string;
 }
