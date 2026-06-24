@@ -8,6 +8,22 @@ export const demoEmpresa: Empresa = {
   whatsapp: '5511999999999',
   cidade: 'São Paulo, SP',
   status: 'ativa',
+  corPrincipal: '#f97316',
+  taxaEntrega: 7,
+  pedidoMinimo: 25,
+  horario: {
+    status: 'automatico',
+    mensagemCliente: '',
+    dias: {
+      seg: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+      ter: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+      qua: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+      qui: { ativo: true, abertura: '18:00', fechamento: '23:00' },
+      sex: { ativo: true, abertura: '18:00', fechamento: '23:59' },
+      sab: { ativo: true, abertura: '18:00', fechamento: '23:59' },
+      dom: { ativo: true, abertura: '18:00', fechamento: '22:30' },
+    },
+  },
 };
 
 export const menuCategories: MenuCategory[] = [
