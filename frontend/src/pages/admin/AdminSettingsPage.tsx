@@ -66,12 +66,12 @@ export function AdminSettingsPage() {
     descricao: empresa.descricao,
     cidadeUf: empresa.cidade,
     whatsapp: empresa.whatsapp,
-    corPrincipal: '#f97316',
-    taxaEntrega: '7.00',
-    pedidoMinimo: '25.00',
-    statusLoja: 'automatico',
-    mensagemCliente: '',
-    dias: diasPadrao,
+    corPrincipal: empresa.corPrincipal ?? '#f97316',
+    taxaEntrega: empresa.taxaEntrega?.toFixed(2) ?? '0.00',
+    pedidoMinimo: empresa.pedidoMinimo?.toFixed(2) ?? '0.00',
+    statusLoja: empresa.horario?.status ?? 'automatico',
+    mensagemCliente: empresa.horario?.mensagemCliente ?? '',
+    dias: empresa.horario?.dias ?? diasPadrao,
   });
 
   useEffect(() => {
@@ -81,6 +81,12 @@ export function AdminSettingsPage() {
       descricao: empresa.descricao,
       cidadeUf: empresa.cidade,
       whatsapp: empresa.whatsapp,
+      corPrincipal: empresa.corPrincipal ?? current.corPrincipal,
+      taxaEntrega: empresa.taxaEntrega?.toFixed(2) ?? current.taxaEntrega,
+      pedidoMinimo: empresa.pedidoMinimo?.toFixed(2) ?? current.pedidoMinimo,
+      statusLoja: empresa.horario?.status ?? current.statusLoja,
+      mensagemCliente: empresa.horario?.mensagemCliente ?? current.mensagemCliente,
+      dias: empresa.horario?.dias ?? current.dias,
     }));
   }, [empresa]);
 
@@ -97,12 +103,23 @@ export function AdminSettingsPage() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const taxaEntregaNumber = Number(form.taxaEntrega.replace(',', '.')) || 0;
+    const pedidoMinimoNumber = Number(form.pedidoMinimo.replace(',', '.')) || 0;
+
     setEmpresa({
       ...empresa,
       nome: form.nomeEmpresa,
       descricao: form.descricao,
       cidade: form.cidadeUf,
       whatsapp: form.whatsapp,
+      corPrincipal: form.corPrincipal,
+      taxaEntrega: taxaEntregaNumber,
+      pedidoMinimo: pedidoMinimoNumber,
+      horario: {
+        status: form.statusLoja,
+        mensagemCliente: form.mensagemCliente,
+        dias: form.dias,
+      },
     });
 
     setSavedMessage('Configurações salvas com sucesso. O cardápio público será atualizado imediatamente.');
