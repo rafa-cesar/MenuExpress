@@ -1,34 +1,26 @@
-import { Link, Outlet, useRouterState } from '@tanstack/react-router';
+import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Rotas que gerenciam seu próprio layout completo (sem nav/footer compartilhados)
 const STANDALONE_ROUTES = ['/', '/assinar', '/login'];
 
 export function PublicLayout() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAdminArea = pathname.startsWith('/admin');
-  const isStandalone = STANDALONE_ROUTES.includes(pathname);
-
+  const { pathname } = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setIsAdmin(!!data.session);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAdmin(!!session);
-    });
+    supabase.auth.getSession().then(({ data }) => setIsAdmin(!!data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => setIsAdmin(!!session));
     return () => listener.subscription.unsubscribe();
   }, []);
 
   // Área admin: sem layout público
-  if (isAdminArea) return <Outlet />;
+  if (pathname.startsWith('/admin')) return <Outlet />;
 
-  // Landing, Assinar, Login: layout próprio, sem wrapper
-  if (isStandalone) return <Outlet />;
+  // Landing, Assinar, Login: têm layout próprio
+  if (STANDALONE_ROUTES.includes(pathname)) return <Outlet />;
 
-  // Demais rotas públicas (ex: /cardapio): mantém nav + footer
+  // Demais rotas públicas (/cardapio etc): nav + footer compartilhados
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white/90 backdrop-blur">
