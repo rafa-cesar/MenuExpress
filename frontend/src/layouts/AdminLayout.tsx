@@ -1,4 +1,7 @@
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 
 const navigationItems = [
   { to: '/admin', label: 'Dashboard', exact: true },
@@ -8,6 +11,32 @@ const navigationItems = [
 ];
 
 export function AdminLayout() {
+  const { session, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !session) {
+      navigate({ to: '/admin/login' });
+    }
+  }, [session, loading, navigate]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    navigate({ to: '/admin/login' });
+  }
+
+  // Enquanto verifica sessão, exibe tela neutra
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950">
+        <p className="text-sm font-bold text-slate-400">Verificando acesso...</p>
+      </div>
+    );
+  }
+
+  // Sem sessão: não renderiza nada (o useEffect já redireciona)
+  if (!session) return null;
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-slate-950 px-5 py-6 text-white lg:block">
@@ -30,9 +59,18 @@ export function AdminLayout() {
           ))}
         </nav>
 
-        <div className="absolute inset-x-5 bottom-6 rounded-3xl bg-white/10 p-4">
-          <p className="text-sm font-bold text-white">Área administrativa</p>
-          <p className="mt-1 text-xs leading-5 text-slate-400">Mock local preparado para Supabase e multiempresa.</p>
+        <div className="absolute inset-x-5 bottom-6 space-y-3">
+          <div className="rounded-3xl bg-white/10 p-4">
+            <p className="text-sm font-bold text-white">Conectado como</p>
+            <p className="mt-1 truncate text-xs text-slate-400">{session.user.email}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full rounded-full border border-white/10 px-4 py-2 text-sm font-black text-slate-300 hover:border-white/20 hover:text-white"
+          >
+            Sair
+          </button>
         </div>
       </aside>
 
@@ -41,9 +79,18 @@ export function AdminLayout() {
           <Link to="/admin" className="text-xl font-black tracking-tight text-slate-950">
             Menu<span className="text-brand-600">Express</span>
           </Link>
-          <Link to="/cardapio" className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
-            Ver cardápio
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/cardapio" className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
+              Ver cardápio
+            </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 hover:text-slate-900"
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
