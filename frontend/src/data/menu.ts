@@ -9,6 +9,7 @@ export const demoEmpresa: Empresa = {
   cidade: 'São Paulo, SP',
   status: 'ativa',
   corPrincipal: '#f97316',
+  logoUrl: '',
   taxaEntrega: 7,
   pedidoMinimo: 25,
   horario: {

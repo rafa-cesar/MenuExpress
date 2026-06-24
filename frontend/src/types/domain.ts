@@ -27,6 +27,7 @@ export interface Empresa {
   cidade: string;
   status: EmpresaStatus;
   corPrincipal: string;
+  logoUrl?: string;
   taxaEntrega: number;
   pedidoMinimo: number;
   horario: HorarioFuncionamento;
