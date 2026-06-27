@@ -9,6 +9,7 @@ export const demoEmpresa: Empresa = {
   cidade: 'São Paulo, SP',
   status: 'ativa',
   corPrincipal: '#f97316',
+  estiloVisual: 'moderno',
   logoUrl: '',
   taxaEntrega: 7,
   pedidoMinimo: 25,
@@ -24,6 +25,12 @@ export const demoEmpresa: Empresa = {
       sab: { ativo: true, abertura: '18:00', fechamento: '23:59' },
       dom: { ativo: true, abertura: '18:00', fechamento: '22:30' },
     },
+  },
+  entrega: {
+    retiradaAtiva: true,
+    entregaAtiva: false,
+    taxaEntregaFixa: 0,
+    pedidoMinimoEntrega: 0,
   },
 };
 
