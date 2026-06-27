@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useMenuStore } from '../../context/MenuStoreContext';
@@ -54,6 +54,33 @@ type SettingsFormState = {
   endRua: string; endNumero: string; endBairro: string; endCidade: string; endComplemento: string;
 };
 
+function buildForm(empresa: ReturnType<typeof useMenuStore>['empresa']): SettingsFormState {
+  const e: ConfigEntrega = { ...ENTREGA_PADRAO, ...empresa.entrega };
+  return {
+    nomeEmpresa: empresa.nome ?? '',
+    descricao: empresa.descricao ?? '',
+    cidadeUf: empresa.cidade ?? '',
+    whatsapp: empresa.whatsapp ?? '',
+    corPrincipal: empresa.corPrincipal ?? '#f97316',
+    logoUrl: empresa.logoUrl ?? '',
+    estiloVisual: empresa.estiloVisual ?? 'moderno',
+    taxaEntrega: toMoney(empresa.taxaEntrega),
+    pedidoMinimo: toMoney(empresa.pedidoMinimo),
+    statusLoja: empresa.horario?.status ?? 'automatico',
+    mensagemCliente: empresa.horario?.mensagemCliente ?? '',
+    dias: empresa.horario?.dias ?? diasPadrao,
+    retiradaAtiva: e.retiradaAtiva ?? true,
+    entregaAtiva: e.entregaAtiva ?? false,
+    taxaEntregaFixa: toMoney(e.taxaEntregaFixa),
+    pedidoMinimoEntrega: toMoney(e.pedidoMinimoEntrega),
+    endRua: e.endereco?.rua ?? '',
+    endNumero: e.endereco?.numero ?? '',
+    endBairro: e.endereco?.bairro ?? '',
+    endCidade: e.endereco?.cidade ?? empresa.cidade ?? '',
+    endComplemento: e.endereco?.complemento ?? '',
+  };
+}
+
 function Toggle({ checked, onChange, label, description }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
   return (
     <label className="flex cursor-pointer items-start gap-4">
@@ -72,66 +99,25 @@ function Toggle({ checked, onChange, label, description }: { checked: boolean; o
 
 export function AdminSettingsPage() {
   usePageTitle('Admin Configurações');
-  const { empresa, setEmpresa } = useMenuStore();
+  const { empresa, loading, setEmpresa } = useMenuStore();
   const [savedMessage, setSavedMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const entregaInicial: ConfigEntrega = { ...ENTREGA_PADRAO, ...empresa.entrega };
+  const initializedRef = useRef(false);
 
-  const [form, setForm] = useState<SettingsFormState>({
-    nomeEmpresa: empresa.nome ?? '',
-    descricao: empresa.descricao ?? '',
-    cidadeUf: empresa.cidade ?? '',
-    whatsapp: empresa.whatsapp ?? '',
-    corPrincipal: empresa.corPrincipal ?? '#f97316',
-    logoUrl: empresa.logoUrl ?? '',
-    estiloVisual: empresa.estiloVisual ?? 'moderno',
-    taxaEntrega: toMoney(empresa.taxaEntrega),
-    pedidoMinimo: toMoney(empresa.pedidoMinimo),
-    statusLoja: empresa.horario?.status ?? 'automatico',
-    mensagemCliente: empresa.horario?.mensagemCliente ?? '',
-    dias: empresa.horario?.dias ?? diasPadrao,
-    retiradaAtiva: entregaInicial.retiradaAtiva ?? true,
-    entregaAtiva: entregaInicial.entregaAtiva ?? false,
-    taxaEntregaFixa: toMoney(entregaInicial.taxaEntregaFixa),
-    pedidoMinimoEntrega: toMoney(entregaInicial.pedidoMinimoEntrega),
-    endRua: entregaInicial.endereco?.rua ?? '',
-    endNumero: entregaInicial.endereco?.numero ?? '',
-    endBairro: entregaInicial.endereco?.bairro ?? '',
-    endCidade: entregaInicial.endereco?.cidade ?? empresa.cidade ?? '',
-    endComplemento: entregaInicial.endereco?.complemento ?? '',
-  });
+  const [form, setForm] = useState<SettingsFormState>(() => buildForm(empresa));
+
+  // Popula o form UMA ÚNICA VEZ quando o loading terminar (dados reais do Supabase chegaram)
+  useEffect(() => {
+    if (!loading && !initializedRef.current) {
+      initializedRef.current = true;
+      setForm(buildForm(empresa));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const brandPreview = useBrand(form.corPrincipal, form.estiloVisual);
-
-  useEffect(() => {
-    const e: ConfigEntrega = { ...ENTREGA_PADRAO, ...empresa.entrega };
-    setForm((cur) => ({
-      ...cur,
-      nomeEmpresa: empresa.nome ?? cur.nomeEmpresa,
-      descricao: empresa.descricao ?? cur.descricao,
-      cidadeUf: empresa.cidade ?? cur.cidadeUf,
-      whatsapp: empresa.whatsapp ?? cur.whatsapp,
-      corPrincipal: empresa.corPrincipal ?? cur.corPrincipal,
-      logoUrl: empresa.logoUrl ?? cur.logoUrl,
-      estiloVisual: empresa.estiloVisual ?? cur.estiloVisual,
-      taxaEntrega: toMoney(empresa.taxaEntrega) !== '0.00' ? toMoney(empresa.taxaEntrega) : cur.taxaEntrega,
-      pedidoMinimo: toMoney(empresa.pedidoMinimo) !== '0.00' ? toMoney(empresa.pedidoMinimo) : cur.pedidoMinimo,
-      statusLoja: empresa.horario?.status ?? cur.statusLoja,
-      mensagemCliente: empresa.horario?.mensagemCliente ?? cur.mensagemCliente,
-      dias: empresa.horario?.dias ?? cur.dias,
-      retiradaAtiva: e.retiradaAtiva ?? cur.retiradaAtiva,
-      entregaAtiva: e.entregaAtiva ?? cur.entregaAtiva,
-      taxaEntregaFixa: toMoney(e.taxaEntregaFixa),
-      pedidoMinimoEntrega: toMoney(e.pedidoMinimoEntrega),
-      endRua: e.endereco?.rua ?? cur.endRua,
-      endNumero: e.endereco?.numero ?? cur.endNumero,
-      endBairro: e.endereco?.bairro ?? cur.endBairro,
-      endCidade: e.endereco?.cidade ?? cur.endCidade,
-      endComplemento: e.endereco?.complemento ?? cur.endComplemento,
-    }));
-  }, [empresa]);
 
   function updateDay(day: DiaSemanaKey, field: keyof HorarioDia, value: boolean | string) {
     setForm((cur) => ({ ...cur, dias: { ...cur.dias, [day]: { ...cur.dias[day], [field]: value } } }));
