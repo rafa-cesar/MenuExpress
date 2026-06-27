@@ -24,6 +24,13 @@ const diasPadrao: HorarioDias = {
   dom: { ativo: true, abertura: '18:00', fechamento: '22:30' },
 };
 
+const ENTREGA_PADRAO: ConfigEntrega = { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
+
+function toMoney(value: unknown): string {
+  const n = Number(value);
+  return isFinite(n) ? n.toFixed(2) : '0.00';
+}
+
 const statusLojaLabels: Record<StatusLoja, string> = {
   automatico: 'Automático (segue horários)',
   forcar_aberto: '🟢 Forçar Aberto (ignora horário)',
@@ -70,45 +77,54 @@ export function AdminSettingsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const entregaInicial: ConfigEntrega = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
+  const entregaInicial: ConfigEntrega = { ...ENTREGA_PADRAO, ...empresa.entrega };
 
   const [form, setForm] = useState<SettingsFormState>({
-    nomeEmpresa: empresa.nome, descricao: empresa.descricao, cidadeUf: empresa.cidade,
-    whatsapp: empresa.whatsapp, corPrincipal: empresa.corPrincipal ?? '#f97316',
-    logoUrl: empresa.logoUrl ?? '', estiloVisual: empresa.estiloVisual ?? 'moderno',
-    taxaEntrega: empresa.taxaEntrega?.toFixed(2) ?? '0.00',
-    pedidoMinimo: empresa.pedidoMinimo?.toFixed(2) ?? '0.00',
+    nomeEmpresa: empresa.nome ?? '',
+    descricao: empresa.descricao ?? '',
+    cidadeUf: empresa.cidade ?? '',
+    whatsapp: empresa.whatsapp ?? '',
+    corPrincipal: empresa.corPrincipal ?? '#f97316',
+    logoUrl: empresa.logoUrl ?? '',
+    estiloVisual: empresa.estiloVisual ?? 'moderno',
+    taxaEntrega: toMoney(empresa.taxaEntrega),
+    pedidoMinimo: toMoney(empresa.pedidoMinimo),
     statusLoja: empresa.horario?.status ?? 'automatico',
     mensagemCliente: empresa.horario?.mensagemCliente ?? '',
     dias: empresa.horario?.dias ?? diasPadrao,
-    retiradaAtiva: entregaInicial.retiradaAtiva,
-    entregaAtiva: entregaInicial.entregaAtiva,
-    taxaEntregaFixa: entregaInicial.taxaEntregaFixa.toFixed(2),
-    pedidoMinimoEntrega: entregaInicial.pedidoMinimoEntrega.toFixed(2),
+    retiradaAtiva: entregaInicial.retiradaAtiva ?? true,
+    entregaAtiva: entregaInicial.entregaAtiva ?? false,
+    taxaEntregaFixa: toMoney(entregaInicial.taxaEntregaFixa),
+    pedidoMinimoEntrega: toMoney(entregaInicial.pedidoMinimoEntrega),
     endRua: entregaInicial.endereco?.rua ?? '',
     endNumero: entregaInicial.endereco?.numero ?? '',
     endBairro: entregaInicial.endereco?.bairro ?? '',
-    endCidade: entregaInicial.endereco?.cidade ?? empresa.cidade,
+    endCidade: entregaInicial.endereco?.cidade ?? empresa.cidade ?? '',
     endComplemento: entregaInicial.endereco?.complemento ?? '',
   });
 
   const brandPreview = useBrand(form.corPrincipal, form.estiloVisual);
 
   useEffect(() => {
-    const e = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
+    const e: ConfigEntrega = { ...ENTREGA_PADRAO, ...empresa.entrega };
     setForm((cur) => ({
       ...cur,
-      nomeEmpresa: empresa.nome, descricao: empresa.descricao, cidadeUf: empresa.cidade,
-      whatsapp: empresa.whatsapp, corPrincipal: empresa.corPrincipal ?? cur.corPrincipal,
-      logoUrl: empresa.logoUrl ?? cur.logoUrl, estiloVisual: empresa.estiloVisual ?? cur.estiloVisual,
-      taxaEntrega: empresa.taxaEntrega?.toFixed(2) ?? cur.taxaEntrega,
-      pedidoMinimo: empresa.pedidoMinimo?.toFixed(2) ?? cur.pedidoMinimo,
+      nomeEmpresa: empresa.nome ?? cur.nomeEmpresa,
+      descricao: empresa.descricao ?? cur.descricao,
+      cidadeUf: empresa.cidade ?? cur.cidadeUf,
+      whatsapp: empresa.whatsapp ?? cur.whatsapp,
+      corPrincipal: empresa.corPrincipal ?? cur.corPrincipal,
+      logoUrl: empresa.logoUrl ?? cur.logoUrl,
+      estiloVisual: empresa.estiloVisual ?? cur.estiloVisual,
+      taxaEntrega: toMoney(empresa.taxaEntrega) !== '0.00' ? toMoney(empresa.taxaEntrega) : cur.taxaEntrega,
+      pedidoMinimo: toMoney(empresa.pedidoMinimo) !== '0.00' ? toMoney(empresa.pedidoMinimo) : cur.pedidoMinimo,
       statusLoja: empresa.horario?.status ?? cur.statusLoja,
       mensagemCliente: empresa.horario?.mensagemCliente ?? cur.mensagemCliente,
       dias: empresa.horario?.dias ?? cur.dias,
-      retiradaAtiva: e.retiradaAtiva, entregaAtiva: e.entregaAtiva,
-      taxaEntregaFixa: e.taxaEntregaFixa.toFixed(2),
-      pedidoMinimoEntrega: e.pedidoMinimoEntrega.toFixed(2),
+      retiradaAtiva: e.retiradaAtiva ?? cur.retiradaAtiva,
+      entregaAtiva: e.entregaAtiva ?? cur.entregaAtiva,
+      taxaEntregaFixa: toMoney(e.taxaEntregaFixa),
+      pedidoMinimoEntrega: toMoney(e.pedidoMinimoEntrega),
       endRua: e.endereco?.rua ?? cur.endRua,
       endNumero: e.endereco?.numero ?? cur.endNumero,
       endBairro: e.endereco?.bairro ?? cur.endBairro,
@@ -253,37 +269,20 @@ export function AdminSettingsPage() {
           )}
 
           <div className="space-y-6">
-            {/* Retirada */}
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
               <Toggle checked={form.retiradaAtiva} onChange={(v) => setForm({ ...form, retiradaAtiva: v })} label="Retirada no local" description="O cliente retira o pedido no seu endereço. Recomendado sempre ativo." />
               {form.retiradaAtiva && (
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <p className="text-sm font-bold text-slate-700 sm:col-span-2">Endereço da loja <span className="font-normal text-slate-400">(exibido ao cliente)</span></p>
-                  <label className="block text-sm font-bold text-slate-700">
-                    Rua / Avenida
-                    <input value={form.endRua} onChange={(e) => setForm({ ...form, endRua: e.target.value })} placeholder="Rua das Flores" className={inputClass} />
-                  </label>
-                  <label className="block text-sm font-bold text-slate-700">
-                    Número
-                    <input value={form.endNumero} onChange={(e) => setForm({ ...form, endNumero: e.target.value })} placeholder="123" className={inputClass} />
-                  </label>
-                  <label className="block text-sm font-bold text-slate-700">
-                    Bairro
-                    <input value={form.endBairro} onChange={(e) => setForm({ ...form, endBairro: e.target.value })} placeholder="Centro" className={inputClass} />
-                  </label>
-                  <label className="block text-sm font-bold text-slate-700">
-                    Cidade
-                    <input value={form.endCidade} onChange={(e) => setForm({ ...form, endCidade: e.target.value })} placeholder="São Paulo" className={inputClass} />
-                  </label>
-                  <label className="block text-sm font-bold text-slate-700 sm:col-span-2">
-                    Complemento <span className="font-normal text-slate-400">(opcional)</span>
-                    <input value={form.endComplemento} onChange={(e) => setForm({ ...form, endComplemento: e.target.value })} placeholder="Loja 2, ao lado da farmácia" className={inputClass} />
-                  </label>
+                  <label className="block text-sm font-bold text-slate-700">Rua / Avenida<input value={form.endRua} onChange={(e) => setForm({ ...form, endRua: e.target.value })} placeholder="Rua das Flores" className={inputClass} /></label>
+                  <label className="block text-sm font-bold text-slate-700">Número<input value={form.endNumero} onChange={(e) => setForm({ ...form, endNumero: e.target.value })} placeholder="123" className={inputClass} /></label>
+                  <label className="block text-sm font-bold text-slate-700">Bairro<input value={form.endBairro} onChange={(e) => setForm({ ...form, endBairro: e.target.value })} placeholder="Centro" className={inputClass} /></label>
+                  <label className="block text-sm font-bold text-slate-700">Cidade<input value={form.endCidade} onChange={(e) => setForm({ ...form, endCidade: e.target.value })} placeholder="São Paulo" className={inputClass} /></label>
+                  <label className="block text-sm font-bold text-slate-700 sm:col-span-2">Complemento <span className="font-normal text-slate-400">(opcional)</span><input value={form.endComplemento} onChange={(e) => setForm({ ...form, endComplemento: e.target.value })} placeholder="Loja 2, ao lado da farmácia" className={inputClass} /></label>
                 </div>
               )}
             </div>
 
-            {/* Entrega */}
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
               <Toggle checked={form.entregaAtiva} onChange={(v) => setForm({ ...form, entregaAtiva: v })} label="Entrega em domicílio" description="O cliente informa o endereço e a taxa fixa é adicionada ao total." />
               {form.entregaAtiva && (
