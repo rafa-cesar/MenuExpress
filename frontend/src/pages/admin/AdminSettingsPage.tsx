@@ -149,6 +149,7 @@ export function AdminSettingsPage() {
         cidade: form.cidadeUf,
         whatsapp: form.whatsapp,
         cor_principal: form.corPrincipal,
+        estilo_visual: form.estiloVisual,
         logo_url: form.logoUrl,
         taxa_entrega: Number(form.taxaEntrega.replace(',', '.')) || 0,
         pedido_minimo: Number(form.pedidoMinimo.replace(',', '.')) || 0,

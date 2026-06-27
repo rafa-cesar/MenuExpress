@@ -2,8 +2,9 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useState } fr
 import { supabase } from '../lib/supabase';
 import { demoCategorias, demoEmpresa, demoMenuItems } from '../data/menu';
 import type { Categoria, Empresa, MenuItem } from '../types/menu';
-import type { EmpresaStatus } from '../types/domain';
+import type { ConfigEntrega, EmpresaStatus } from '../types/domain';
 import type { MenuCategory } from '../types/menu';
+import type { EstiloVisual } from '../types/domain';
 
 const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
@@ -23,6 +24,7 @@ export type MenuStoreContextValue = MenuStoreState & {
 const MenuStoreContext = createContext<MenuStoreContextValue | undefined>(undefined);
 
 function mapEmpresa(row: Record<string, unknown>): Empresa {
+  const entregaRaw = row.entrega as ConfigEntrega | null;
   return {
     id: row.id as string,
     nome: row.nome as string,
@@ -32,13 +34,16 @@ function mapEmpresa(row: Record<string, unknown>): Empresa {
     cidade: row.cidade as string,
     whatsapp: row.whatsapp as string,
     corPrincipal: row.cor_principal as string,
+    estiloVisual: (row.estilo_visual as EstiloVisual) ?? 'moderno',
     taxaEntrega: Number(row.taxa_entrega),
     pedidoMinimo: Number(row.pedido_minimo),
+    logoUrl: row.logo_url as string ?? '',
     horario: {
       status: row.horario_status as Empresa['horario']['status'],
       mensagemCliente: row.horario_mensagem_cliente as string,
       dias: row.horario_dias as Empresa['horario']['dias'],
     },
+    entrega: entregaRaw ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 },
   };
 }
 
