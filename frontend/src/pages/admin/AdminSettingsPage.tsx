@@ -3,6 +3,7 @@ import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import { useBrand } from '../../hooks/useBrand';
+import { supabase } from '../../lib/supabase';
 import type { ConfigEntrega, EstiloVisual } from '../../types/domain';
 
 type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
@@ -66,6 +67,8 @@ export function AdminSettingsPage() {
   usePageTitle('Admin Configurações');
   const { empresa, setEmpresa } = useMenuStore();
   const [savedMessage, setSavedMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const entregaInicial: ConfigEntrega = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
 
@@ -120,9 +123,49 @@ export function AdminSettingsPage() {
 
   const nenhumaModalidade = !form.retiradaAtiva && !form.entregaAtiva;
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (nenhumaModalidade) return;
+
+    setSaving(true);
+    setErrorMessage('');
+
+    const entregaObj: ConfigEntrega = {
+      retiradaAtiva: form.retiradaAtiva,
+      entregaAtiva: form.entregaAtiva,
+      taxaEntregaFixa: Number(form.taxaEntregaFixa.replace(',', '.')) || 0,
+      pedidoMinimoEntrega: Number(form.pedidoMinimoEntrega.replace(',', '.')) || 0,
+      endereco: form.retiradaAtiva ? {
+        rua: form.endRua, numero: form.endNumero, bairro: form.endBairro,
+        cidade: form.endCidade, complemento: form.endComplemento,
+      } : undefined,
+    };
+
+    const { error } = await supabase
+      .from('empresas')
+      .update({
+        nome: form.nomeEmpresa,
+        descricao: form.descricao,
+        cidade: form.cidadeUf,
+        whatsapp: form.whatsapp,
+        cor_principal: form.corPrincipal,
+        logo_url: form.logoUrl,
+        taxa_entrega: Number(form.taxaEntrega.replace(',', '.')) || 0,
+        pedido_minimo: Number(form.pedidoMinimo.replace(',', '.')) || 0,
+        horario_status: form.statusLoja,
+        horario_mensagem_cliente: form.mensagemCliente,
+        horario_dias: form.dias,
+        entrega: entregaObj,
+      })
+      .eq('id', empresa.id);
+
+    setSaving(false);
+
+    if (error) {
+      setErrorMessage('Erro ao salvar: ' + error.message);
+      return;
+    }
+
     setEmpresa({
       ...empresa,
       nome: form.nomeEmpresa, descricao: form.descricao, cidade: form.cidadeUf,
@@ -131,17 +174,9 @@ export function AdminSettingsPage() {
       taxaEntrega: Number(form.taxaEntrega.replace(',', '.')) || 0,
       pedidoMinimo: Number(form.pedidoMinimo.replace(',', '.')) || 0,
       horario: { status: form.statusLoja, mensagemCliente: form.mensagemCliente, dias: form.dias },
-      entrega: {
-        retiradaAtiva: form.retiradaAtiva,
-        entregaAtiva: form.entregaAtiva,
-        taxaEntregaFixa: Number(form.taxaEntregaFixa.replace(',', '.')) || 0,
-        pedidoMinimoEntrega: Number(form.pedidoMinimoEntrega.replace(',', '.')) || 0,
-        endereco: form.retiradaAtiva ? {
-          rua: form.endRua, numero: form.endNumero, bairro: form.endBairro,
-          cidade: form.endCidade, complemento: form.endComplemento,
-        } : undefined,
-      },
+      entrega: entregaObj,
     });
+
     setSavedMessage('Configurações salvas! O cardápio público já reflete as mudanças.');
     setTimeout(() => setSavedMessage(''), 4000);
   }
@@ -311,11 +346,12 @@ export function AdminSettingsPage() {
         </div>
 
         {savedMessage && <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700" role="status">✅ {savedMessage}</p>}
+        {errorMessage && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600" role="alert">❌ {errorMessage}</p>}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-500">As alterações são aplicadas imediatamente no cardápio público.</p>
-          <button type="submit" disabled={nenhumaModalidade} className="rounded-full bg-slate-950 px-6 py-3 font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
-            Salvar configurações
+          <button type="submit" disabled={nenhumaModalidade || saving} className="rounded-full bg-slate-950 px-6 py-3 font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">
+            {saving ? 'Salvando...' : 'Salvar configurações'}
           </button>
         </div>
       </form>
