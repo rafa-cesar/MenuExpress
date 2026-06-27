@@ -6,6 +6,8 @@ import { useBrand } from '../../hooks/useBrand';
 import { supabase } from '../../lib/supabase';
 import type { ConfigEntrega, EstiloVisual } from '../../types/domain';
 
+const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
 type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 interface HorarioDia { ativo: boolean; abertura: string; fechamento: string; }
@@ -105,10 +107,9 @@ export function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const initializedRef = useRef(false);
-
   const [form, setForm] = useState<SettingsFormState>(() => buildForm(empresa));
 
-  // Popula o form UMA ÚNICA VEZ quando o loading terminar (dados reais do Supabase chegaram)
+  // Popula o form UMA ÚNICA VEZ quando os dados reais chegam do Supabase
   useEffect(() => {
     if (!loading && !initializedRef.current) {
       initializedRef.current = true;
@@ -143,7 +144,8 @@ export function AdminSettingsPage() {
       } : undefined,
     };
 
-    const { error } = await supabase
+    // Usa EMPRESA_ID fixo — nunca depende de empresa.id que pode ser o ID demo
+    const { data: updatedRows, error } = await supabase
       .from('empresas')
       .update({
         nome: form.nomeEmpresa,
@@ -160,7 +162,8 @@ export function AdminSettingsPage() {
         horario_dias: form.dias,
         entrega: entregaObj,
       })
-      .eq('id', empresa.id);
+      .eq('id', EMPRESA_ID)
+      .select('id');
 
     setSaving(false);
 
@@ -169,8 +172,14 @@ export function AdminSettingsPage() {
       return;
     }
 
+    if (!updatedRows || updatedRows.length === 0) {
+      setErrorMessage('Nenhuma linha atualizada — verifique permissões no banco.');
+      return;
+    }
+
     setEmpresa({
       ...empresa,
+      id: EMPRESA_ID,
       nome: form.nomeEmpresa, descricao: form.descricao, cidade: form.cidadeUf,
       whatsapp: form.whatsapp, corPrincipal: form.corPrincipal,
       logoUrl: form.logoUrl, estiloVisual: form.estiloVisual,
