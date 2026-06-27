@@ -7,8 +7,21 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Brand defaults — sobrescritos pelo JS via MenuStoreProvider */
+  --brand-primary: #f97316;
+  --brand-primary-dark: #c2580f;
+  --brand-primary-light: #fff1e6;
+  --brand-on-primary: #ffffff;
 }
 
 body {
   margin: 0;
 }
+
+/* Utilitários brand que funcionam em qualquer componente */
+.bg-brand        { background-color: var(--brand-primary); }
+.bg-brand-light  { background-color: var(--brand-primary-light); }
+.text-brand      { color: var(--brand-primary); }
+.border-brand    { border-color: var(--brand-primary); }
+.ring-brand      { --tw-ring-color: var(--brand-primary); }

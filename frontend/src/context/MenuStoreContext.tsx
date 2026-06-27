@@ -23,6 +23,45 @@ export type MenuStoreContextValue = MenuStoreState & {
 
 const MenuStoreContext = createContext<MenuStoreContextValue | undefined>(undefined);
 
+// ─── helpers de cor ─────────────────────────────────────────────────────────
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
+  const num = parseInt(full, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+function darken(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const f = 1 - amount;
+  const h = (v: number) => Math.round(Math.max(0, v * f)).toString(16).padStart(2, '0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+function lighten(hex: string, amount: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  const h = (v: number) => Math.round(Math.min(255, v + (255 - v) * amount)).toString(16).padStart(2, '0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+function luminance(r: number, g: number, b: number): number {
+  const [rs, gs, bs] = [r, g, b].map(v => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+/** Injeta as CSS variables de marca no :root para que TODO o app as use */
+function applyBrandVars(cor: string) {
+  const primary = cor || '#f97316';
+  const [r, g, b] = hexToRgb(primary);
+  const lum = luminance(r, g, b);
+  const root = document.documentElement;
+  root.style.setProperty('--brand-primary', primary);
+  root.style.setProperty('--brand-primary-dark', darken(primary, 0.18));
+  root.style.setProperty('--brand-primary-light', lighten(primary, 0.82));
+  root.style.setProperty('--brand-on-primary', lum > 0.35 ? '#0f172a' : '#ffffff');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function mapEmpresa(row: Record<string, unknown>): Empresa {
   const entregaRaw = row.entrega as ConfigEntrega | null;
   return {
@@ -37,7 +76,7 @@ function mapEmpresa(row: Record<string, unknown>): Empresa {
     estiloVisual: (row.estilo_visual as EstiloVisual) ?? 'moderno',
     taxaEntrega: Number(row.taxa_entrega),
     pedidoMinimo: Number(row.pedido_minimo),
-    logoUrl: row.logo_url as string ?? '',
+    logoUrl: (row.logo_url as string) ?? '',
     horario: {
       status: row.horario_status as Empresa['horario']['status'],
       mensagemCliente: row.horario_mensagem_cliente as string,
@@ -74,10 +113,21 @@ function mapProduto(row: Record<string, unknown>): MenuItem {
 }
 
 export function MenuStoreProvider({ children }: { children: ReactNode }) {
-  const [empresa, setEmpresa] = useState<Empresa>(demoEmpresa);
+  const [empresa, setEmpresaState] = useState<Empresa>(demoEmpresa);
   const [categorias, setCategorias] = useState<Categoria[]>(demoCategorias);
   const [produtos, setProdutos] = useState<MenuItem[]>(demoMenuItems);
   const [loading, setLoading] = useState(true);
+
+  // Sempre que a cor da empresa mudar, injeta no :root
+  useEffect(() => {
+    applyBrandVars(empresa.corPrincipal ?? '#f97316');
+  }, [empresa.corPrincipal]);
+
+  // Wrapper que injeta vars imediatamente ao setar empresa (ex: após salvar)
+  const setEmpresa = (e: Empresa) => {
+    applyBrandVars(e.corPrincipal ?? '#f97316');
+    setEmpresaState(e);
+  };
 
   useEffect(() => {
     async function fetchAll() {
@@ -99,12 +149,13 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-
     fetchAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<MenuStoreContextValue>(
     () => ({ empresa, categorias, produtos, loading, setEmpresa, setCategorias, setProdutos }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [empresa, categorias, produtos, loading],
   );
 
