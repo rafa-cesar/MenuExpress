@@ -1,6 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { demoCategorias, demoEmpresa, demoMenuItems } from '../data/menu';
 import type { Categoria, Empresa, MenuItem } from '../types/menu';
 import type { ConfigEntrega, EmpresaStatus } from '../types/domain';
 import type { MenuCategory } from '../types/menu';
@@ -9,10 +8,11 @@ import type { EstiloVisual } from '../types/domain';
 const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 export type MenuStoreState = {
-  empresa: Empresa;
+  empresa: Empresa | null;
   categorias: Categoria[];
   produtos: MenuItem[];
   loading: boolean;
+  erro: string | null;
 };
 
 export type MenuStoreContextValue = MenuStoreState & {
@@ -113,15 +113,19 @@ function mapProduto(row: Record<string, unknown>): MenuItem {
 }
 
 export function MenuStoreProvider({ children }: { children: ReactNode }) {
-  const [empresa, setEmpresaState] = useState<Empresa>(demoEmpresa);
-  const [categorias, setCategorias] = useState<Categoria[]>(demoCategorias);
-  const [produtos, setProdutos] = useState<MenuItem[]>(demoMenuItems);
+  // Estado inicial null/[] — nenhum dado demo em produção
+  const [empresa, setEmpresaState] = useState<Empresa | null>(null);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [produtos, setProdutos] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   // Sempre que a cor da empresa mudar, injeta no :root
   useEffect(() => {
-    applyBrandVars(empresa.corPrincipal ?? '#f97316');
-  }, [empresa.corPrincipal]);
+    if (empresa?.corPrincipal) {
+      applyBrandVars(empresa.corPrincipal);
+    }
+  }, [empresa?.corPrincipal]);
 
   // Wrapper que injeta vars imediatamente ao setar empresa (ex: após salvar)
   const setEmpresa = (e: Empresa) => {
@@ -132,19 +136,31 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchAll() {
       setLoading(true);
+      setErro(null);
       try {
-        const [{ data: empresaData }, { data: categoriasData }, { data: produtosData }] =
+        const [{ data: empresaData, error: empresaError }, { data: categoriasData }, { data: produtosData }] =
           await Promise.all([
             supabase.from('empresas').select('*').eq('id', EMPRESA_ID).single(),
             supabase.from('categorias').select('*').eq('empresa_id', EMPRESA_ID).eq('ativa', true).order('ordem'),
             supabase.from('produtos').select('*').eq('empresa_id', EMPRESA_ID).eq('disponivel', true).order('criado_em'),
           ]);
 
-        if (empresaData) setEmpresa(mapEmpresa(empresaData as Record<string, unknown>));
-        if (categoriasData?.length) setCategorias(categoriasData.map(mapCategoria));
-        if (produtosData?.length) setProdutos(produtosData.map(mapProduto));
+        if (empresaError || !empresaData) {
+          // Empresa não encontrada: expõe erro, NÃO usa dados demo
+          const msg = empresaError?.message ?? 'Empresa não encontrada no banco de dados.';
+          console.error('[MenuStore] Empresa não encontrada:', msg);
+          setErro('Não foi possível carregar o cardápio. ' + msg);
+          return;
+        }
+
+        setEmpresa(mapEmpresa(empresaData as Record<string, unknown>));
+        // Sempre sobrescreve o estado — array vazio é um resultado válido
+        setCategorias((categoriasData ?? []).map(mapCategoria));
+        setProdutos((produtosData ?? []).map(mapProduto));
       } catch (error) {
-        console.error('[MenuStore] Falha ao carregar dados do Supabase, usando dados locais.', error);
+        const msg = error instanceof Error ? error.message : 'Erro desconhecido.';
+        console.error('[MenuStore] Falha ao carregar dados do Supabase:', msg);
+        setErro('Falha de conexão ao carregar o cardápio. Tente recarregar a página.');
       } finally {
         setLoading(false);
       }
@@ -154,9 +170,9 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<MenuStoreContextValue>(
-    () => ({ empresa, categorias, produtos, loading, setEmpresa, setCategorias, setProdutos }),
+    () => ({ empresa, categorias, produtos, loading, erro, setEmpresa, setCategorias, setProdutos }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [empresa, categorias, produtos, loading],
+    [empresa, categorias, produtos, loading, erro],
   );
 
   return <MenuStoreContext.Provider value={value}>{children}</MenuStoreContext.Provider>;

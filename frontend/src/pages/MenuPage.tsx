@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MenuCard } from '../components/MenuCard';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useStoreStatus } from '../hooks/useStoreStatus';
 import { useBrand } from '../hooks/useBrand';
-import { buildWhatsAppOrderUrl, menuCatalogService } from '../services';
+import { buildWhatsAppOrderUrl } from '../services';
 import { pedidosService } from '../services/pedidosService';
 import type { CartItem, MenuCategory, MenuItem } from '../types/menu';
 import type { ModalidadeEntrega, Pedido } from '../types/domain';
@@ -22,7 +22,7 @@ function ConfirmacaoScreen({
   pedido, empresa, whatsappMsg, whatsapp, brand, onNovoPedido,
 }: {
   pedido: Pedido;
-  empresa: ReturnType<typeof useMenuStore>['empresa'];
+  empresa: NonNullable<ReturnType<typeof useMenuStore>['empresa']>;
   whatsappMsg: string;
   whatsapp: string;
   brand: ReturnType<typeof useBrand>;
@@ -97,17 +97,62 @@ function ConfirmacaoScreen({
 // ─── Página principal ───────────────────────────────────────────────────────
 export function MenuPage() {
   usePageTitle('Cardápio');
-  const menuCatalog = menuCatalogService.getDemoCatalog();
-  const { categoriasNomes: menuCategories } = menuCatalog;
-  const { empresa, produtos } = useMenuStore();
+  const { empresa, produtos, categorias, loading, erro } = useMenuStore();
   const storeStatus = useStoreStatus();
-  const brand = useBrand(empresa.corPrincipal, empresa.estiloVisual);
+
+  // Categorias vêm exclusivamente do Supabase via useMenuStore()
+  const menuCategories = categorias.map(c => c.nome) as MenuCategory[];
+
+  // selectedCategory inicia com a primeira categoria real do banco
+  const [selectedCategory, setSelectedCategory] = useState<MenuCategory | null>(null);
+
+  useEffect(() => {
+    if (menuCategories.length > 0 && selectedCategory === null) {
+      setSelectedCategory(menuCategories[0]);
+    }
+  }, [menuCategories, selectedCategory]);
+
+  const brand = useBrand(
+    empresa?.corPrincipal ?? '#f97316',
+    empresa?.estiloVisual ?? 'moderno',
+  );
+
+  // ─── Guards: loading e erro antes de renderizar o cardápio ───────────────
+  if (loading) {
+    return (
+      <section className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
+          <p className="mt-4 text-sm font-bold text-slate-500">Carregando cardápio...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (erro || !empresa) {
+    return (
+      <section className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="w-full max-w-md rounded-3xl border border-red-200 bg-white p-8 text-center shadow-xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl">⚠️</div>
+          <h1 className="mt-5 text-xl font-black text-slate-900">Cardápio indisponível</h1>
+          <p className="mt-2 text-sm text-slate-500">{erro ?? 'Não foi possível carregar os dados da loja.'}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 rounded-full bg-slate-900 px-6 py-3 text-sm font-black text-white hover:bg-slate-700"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </section>
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const cfg = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
   const ambasAtivas = cfg.retiradaAtiva && cfg.entregaAtiva;
   const defaultModalidade: ModalidadeEntrega = cfg.entregaAtiva && !cfg.retiradaAtiva ? 'entrega' : 'retirada';
 
-  const [selectedCategory, setSelectedCategory] = useState<MenuCategory>('Promoções');
   const [cartItems, setCartItems]               = useState<CartItem[]>([]);
   const [orderNote, setOrderNote]               = useState('');
   const [checkoutMessage, setCheckoutMessage]   = useState('');
@@ -118,7 +163,12 @@ export function MenuPage() {
   const [salvando, setSalvando]                 = useState(false);
   const [pedidoFeito, setPedidoFeito]           = useState<Pedido | null>(null);
 
-  const filteredItems  = useMemo(() => produtos.filter((item) => item.categoria === selectedCategory), [produtos, selectedCategory]);
+  const activeCategory = selectedCategory ?? menuCategories[0] ?? null;
+
+  const filteredItems  = useMemo(
+    () => activeCategory ? produtos.filter((item) => item.categoria === activeCategory) : [],
+    [produtos, activeCategory],
+  );
   const subtotal       = useMemo(() => cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0), [cartItems]);
   const taxa           = modalidade === 'entrega' && cfg.entregaAtiva ? cfg.taxaEntregaFixa : 0;
   const total          = subtotal + taxa;
@@ -198,7 +248,7 @@ export function MenuPage() {
     setClienteTel('');
     setClienteEnd('');
     setCheckoutMessage('');
-    setSelectedCategory('Promoções');
+    setSelectedCategory(menuCategories[0] ?? null);
   }
 
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
@@ -255,31 +305,38 @@ export function MenuPage() {
           </div>
         </div>
 
-        {/* Categorias */}
-        <div className="sticky top-0 z-20 -mx-4 mt-6 border-y border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-full sm:border">
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:justify-center sm:pb-0">
-            {menuCategories.map((category) => {
-              const isActive = selectedCategory === category;
-              return (
-                <button key={category} type="button" onClick={() => setSelectedCategory(category)}
-                  className="shrink-0 px-4 py-2 text-sm font-black transition"
-                  style={isActive ? { ...btnStyle, boxShadow: `0 4px 20px ${brand.primary}44` } : { backgroundColor: '#fff', color: '#334155', borderRadius: brand.buttonRadius }}>
-                  {category}
-                </button>
-              );
-            })}
+        {/* Categorias — geradas exclusivamente do banco via useMenuStore() */}
+        {menuCategories.length > 0 && (
+          <div className="sticky top-0 z-20 -mx-4 mt-6 border-y border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-full sm:border">
+            <div className="flex gap-2 overflow-x-auto pb-1 sm:justify-center sm:pb-0">
+              {menuCategories.map((category) => {
+                const isActive = activeCategory === category;
+                return (
+                  <button key={category} type="button" onClick={() => setSelectedCategory(category)}
+                    className="shrink-0 px-4 py-2 text-sm font-black transition"
+                    style={isActive ? { ...btnStyle, boxShadow: `0 4px 20px ${brand.primary}44` } : { backgroundColor: '#fff', color: '#334155', borderRadius: brand.buttonRadius }}>
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
           <div>
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
                 <p className="text-sm font-bold uppercase tracking-wide" style={{ color: brand.primary }}>Categoria</p>
-                <h2 className="text-2xl font-black text-slate-950">{selectedCategory}</h2>
+                <h2 className="text-2xl font-black text-slate-950">{activeCategory ?? ''}</h2>
               </div>
               <span className="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm">{filteredItems.length} produto(s)</span>
             </div>
+            {filteredItems.length === 0 && !loading && (
+              <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
+                <p className="text-sm text-slate-500">Nenhum produto disponível nesta categoria.</p>
+              </div>
+            )}
             <div className="grid gap-5 md:grid-cols-2">
               {filteredItems.map((item) => (
                 <MenuCard key={item.id} item={item} quantity={getQty(item.id)}
@@ -334,7 +391,7 @@ type CartPanelProps = {
   orderNote: string; checkoutMessage: string; storeAberta: boolean;
   brand: ReturnType<typeof useBrand>; compact?: boolean; salvando: boolean;
   modalidade: ModalidadeEntrega; ambasAtivas: boolean;
-  cfg: NonNullable<ReturnType<typeof useMenuStore>['empresa']['entrega']>;
+  cfg: NonNullable<ReturnType<typeof useMenuStore>['empresa']>['entrega'] & object;
   abaixoDoMinimo: boolean;
   clienteNome: string; clienteTel: string; clienteEnd: string;
   onModalidade: (v: ModalidadeEntrega) => void;
