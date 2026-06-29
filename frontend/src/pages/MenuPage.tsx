@@ -6,7 +6,7 @@ import { useBrand } from '../hooks/useBrand';
 import { buildWhatsAppOrderUrl } from '../services';
 import { pedidosService } from '../services/pedidosService';
 import type { CartItem, MenuCategory, MenuItem } from '../types/menu';
-import type { ModalidadeEntrega, Pedido } from '../types/domain';
+import type { ConfigEntrega, ModalidadeEntrega, Pedido } from '../types/domain';
 import { useMenuStore } from '../context/MenuStoreContext';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -199,7 +199,7 @@ export function MenuPage() {
   // A partir daqui empresa é Empresa (não null) — TypeScript sabe disso
   // ─────────────────────────────────────────────────────────────────────────
 
-  const cfg = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
+  const cfg: ConfigEntrega = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
   const ambasAtivas = cfg.retiradaAtiva && cfg.entregaAtiva;
   const defaultModalidade: ModalidadeEntrega = cfg.entregaAtiva && !cfg.retiradaAtiva ? 'entrega' : 'retirada';
 
@@ -452,7 +452,7 @@ type CartPanelProps = {
   orderNote: string; checkoutMessage: string; storeAberta: boolean;
   brand: ReturnType<typeof useBrand>; compact?: boolean; salvando: boolean;
   modalidade: ModalidadeEntrega; ambasAtivas: boolean;
-  cfg: NonNullable<ReturnType<typeof useMenuStore>['empresa']>['entrega'] & object;
+  cfg: ConfigEntrega;
   abaixoDoMinimo: boolean;
   clienteNome: string; clienteTel: string; clienteEnd: string;
   onModalidade: (v: ModalidadeEntrega) => void;
