@@ -48,6 +48,8 @@ export interface Empresa {
   slug: string;
   descricao: string;
   whatsapp: string;
+  /** Handle do Instagram sem o @ (ex: "minha_loja"). Opcional. */
+  instagram?: string;
   cidade: string;
   status: EmpresaStatus;
   corPrincipal: string;
