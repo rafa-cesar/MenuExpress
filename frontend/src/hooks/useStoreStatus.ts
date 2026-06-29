@@ -26,7 +26,12 @@ export type StoreStatusResult = {
 export function useStoreStatus(): StoreStatusResult {
   const { empresa } = useMenuStore();
 
-  return useMemo(() => {
+  return useMemo((): StoreStatusResult => {
+    // Guard: empresa ainda não carregada → considera fechada
+    if (!empresa) {
+      return { aberta: false, motivo: 'horario_fechado' };
+    }
+
     const { status, dias, mensagemCliente } = empresa.horario;
     const mensagem = mensagemCliente || undefined;
 
@@ -58,5 +63,5 @@ export function useStoreStatus(): StoreStatusResult {
       motivo: dentroDaJanela ? 'horario_aberto' : 'horario_fechado',
       mensagem,
     };
-  }, [empresa.horario]);
+  }, [empresa]);
 }

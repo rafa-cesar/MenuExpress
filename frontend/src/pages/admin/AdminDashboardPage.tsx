@@ -86,17 +86,20 @@ export function AdminDashboardPage() {
   const [exportando, setExportando] = useState(false);
   const [periodo, setPeriodo]     = useState<'hoje' | '7d' | '30d'>('7d');
 
+  // Só busca pedidos quando empresa estiver carregada (empresa !== null)
   useEffect(() => {
+    if (!empresa) return;
+    const empresaId = empresa.id;
     async function load() {
       const [ativos, historico] = await Promise.all([
-        pedidosService.listar(),
-        pedidosService.listarHistorico(),
+        pedidosService.listar(empresaId),
+        pedidosService.listarHistorico(empresaId),
       ]);
       setPedidos([...ativos, ...historico]);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [empresa]);
 
   const pedidosFiltrados = useMemo(() => {
     const agora  = new Date();
@@ -157,9 +160,11 @@ export function AdminDashboardPage() {
   const categoriasSemProdutos = categorias.filter(
     (c) => c.ativa && !produtos.some((p) => p.categoriaId === c.id && p.disponivel)
   ).length;
+
+  // empresa?.horario — guard necessário pois empresa pode ser null durante carregamento
   const alerts = [
     produtosInativos > 0      && { title: `${produtosInativos} produto(s) pausado(s)`,    body: 'Não aparecem no cardápio.',      to: '/admin/produtos',      cta: 'Revisar' },
-    empresa.horario?.status === 'forcar_fechado' && { title: 'Loja forçada como fechada', body: 'Clientes não conseguem pedir.', to: '/admin/configuracoes', cta: 'Abrir config.' },
+    empresa?.horario?.status === 'forcar_fechado' && { title: 'Loja forçada como fechada', body: 'Clientes não conseguem pedir.', to: '/admin/configuracoes', cta: 'Abrir config.' },
     categoriasSemProdutos > 0 && { title: `${categoriasSemProdutos} categoria(s) vazia(s)`, body: 'Ficam ocultas no cardápio.',   to: '/admin/categorias',    cta: 'Ver categorias' },
     destaques === 0           && { title: 'Nenhum produto em destaque',                   body: 'Destaques aumentam conversões.',  to: '/admin/produtos',      cta: 'Destacar' },
   ].filter(Boolean) as { title: string; body: string; to: string; cta: string }[];

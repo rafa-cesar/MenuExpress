@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { useMenuStore } from '../../context/MenuStoreContext';
 import { pedidosService } from '../../services/pedidosService';
 import { supabase } from '../../lib/supabase';
 import type { Pedido, PedidoStatus } from '../../types/domain';
@@ -11,9 +12,9 @@ const TEMPO_PADRAO_MIN = 30;
 const COLUNAS: {
   status: PedidoStatus;
   label: string;
-  acento: string;   // cor da barra superior
-  dot: string;      // cor do dot no header
-  contador: string; // bg do contador
+  acento: string;
+  dot: string;
+  contador: string;
 }[] = [
   { status: 'aguardando',      label: 'Aguardando',       acento: 'bg-blue-500',    dot: 'bg-blue-500',    contador: 'bg-blue-50 text-blue-700' },
   { status: 'em_preparo',      label: 'Em preparação',    acento: 'bg-amber-400',   dot: 'bg-amber-400',   contador: 'bg-amber-50 text-amber-700' },
@@ -132,7 +133,6 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
         urgente ? 'border-red-200 ring-1 ring-red-100' : 'border-slate-200'
       }`}>
 
-        {/* Topo do card */}
         <div className="flex items-start justify-between gap-3 px-4 pt-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pedido</p>
@@ -141,7 +141,6 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
           <UrgenciaBadge criadoEm={pedido.criadoEm} status={pedido.status} />
         </div>
 
-        {/* Previsão de conclusão */}
         {pedido.previsaoEm && pedido.status === 'em_preparo' && (
           <div className="mx-4 mt-3 flex items-center gap-2.5 rounded-xl bg-amber-50 px-3 py-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/></svg>
@@ -152,13 +151,11 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
           </div>
         )}
 
-        {/* Cliente */}
         <div className="mt-3 px-4">
           {pedido.clienteNome && <p className="font-bold text-slate-900">{pedido.clienteNome}</p>}
           {pedido.clienteTel  && <p className="text-xs text-slate-400">{pedido.clienteTel}</p>}
         </div>
 
-        {/* Itens */}
         <ul className="mt-3 space-y-1 border-t border-slate-100 px-4 pt-3">
           {pedido.itens.map((item, i) => (
             <li key={i} className="flex items-baseline justify-between gap-2 text-sm">
@@ -168,12 +165,10 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
           ))}
         </ul>
 
-        {/* Observação */}
         {pedido.observacao && (
           <p className="mx-4 mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">{pedido.observacao}</p>
         )}
 
-        {/* Rodapé do card */}
         <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 px-4 py-3">
           <span className="rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-500">
             {pedido.modalidade === 'entrega' ? '🚚 Entrega' : '🏠 Retirada'}
@@ -181,7 +176,6 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
           <span className="text-sm font-black text-slate-950">{fmt.format(pedido.total)}</span>
         </div>
 
-        {/* Ações */}
         <div className="flex gap-2 border-t border-slate-100 px-4 pb-4 pt-3">
           {proximo && btnLabel && (
             <button type="button"
@@ -212,6 +206,7 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
 
 export function AdminOrdersPage() {
   usePageTitle('Pedidos');
+  const { empresa } = useMenuStore();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const audioRef   = useRef<AudioContext | null>(null);
@@ -232,8 +227,9 @@ export function AdminOrdersPage() {
     } catch { /* silently fail */ }
   }
 
-  async function carregar() {
-    const data = await pedidosService.listar();
+  // carregar recebe empresaId explicitamente para evitar closure stale
+  async function carregar(empresaId: string) {
+    const data = await pedidosService.listar(empresaId);
     const n = data.filter((p) => p.status === 'aguardando').length;
     if (n > prevCount.current) playBeep();
     prevCount.current = n;
@@ -242,14 +238,19 @@ export function AdminOrdersPage() {
   }
 
   useEffect(() => {
-    carregar();
+    // Não inicia polling enquanto empresa não estiver carregada
+    if (!empresa) return;
+    const empresaId = empresa.id;
+
+    carregar(empresaId);
+
     const ch = supabase.channel('pedidos-rt')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, carregar)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos' }, carregar)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, () => carregar(empresaId))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'pedidos' }, () => carregar(empresaId))
       .subscribe();
-    const t = setInterval(carregar, 30_000);
+    const t = setInterval(() => carregar(empresaId), 30_000);
     return () => { supabase.removeChannel(ch); clearInterval(t); };
-  }, []);
+  }, [empresa]);
 
   async function avancar(pedido: Pedido, estimativa?: number) {
     if (pedido.status === 'aguardando' && estimativa !== undefined) {
@@ -281,7 +282,6 @@ export function AdminOrdersPage() {
   return (
     <section className="space-y-6">
 
-      {/* Header */}
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Gestão em tempo real</p>
@@ -294,19 +294,17 @@ export function AdminOrdersPage() {
               {aguardando} aguardando
             </span>
           )}
-          <button type="button" onClick={carregar}
+          <button type="button" onClick={() => empresa && carregar(empresa.id)}
             className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700">
             Atualizar
           </button>
         </div>
       </div>
 
-      {/* Kanban */}
       <div className="grid gap-3 lg:grid-cols-5">
         {COLUNAS.map((col, idx) => (
           <div key={col.status} className="flex flex-col gap-3">
 
-            {/* Cabeçalho da coluna */}
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className={`h-1 w-full ${col.acento}`} />
               <div className="flex items-center justify-between px-4 py-3">
@@ -320,7 +318,6 @@ export function AdminOrdersPage() {
               </div>
             </div>
 
-            {/* Cards */}
             {cols[idx].length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 py-10 text-center">
                 <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">

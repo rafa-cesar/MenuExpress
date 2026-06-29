@@ -147,6 +147,7 @@ export function MenuPage() {
       </section>
     );
   }
+  // A partir daqui empresa é Empresa (não null) — TypeScript sabe disso
   // ─────────────────────────────────────────────────────────────────────────
 
   const cfg = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
@@ -222,7 +223,8 @@ export function MenuPage() {
     setCheckoutMessage('');
     setSalvando(true);
 
-    const pedido = await pedidosService.criar({
+    // empresa.id é seguro aqui: o guard `if (!empresa) return` acima garante que empresa !== null
+    const pedido = await pedidosService.criar(empresa.id, {
       modalidade, clienteNome, clienteTel, clienteEnd,
       itens: cartItems.map((i) => ({
         nome: i.product.nome,
