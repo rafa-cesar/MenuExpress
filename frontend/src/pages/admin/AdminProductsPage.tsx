@@ -1,15 +1,16 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
-import { demoCategorias, demoEmpresa, demoMenuItems, menuCategories } from '../../data/menu';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { MenuCategory, MenuItem } from '../../types/menu';
 import { useMenuStore } from '../../context/MenuStoreContext';
+import type { MenuCategory, MenuItem } from '../../types/menu';
+
+// Nenhum dado demo importado — produtos e categorias vêm exclusivamente do MenuStoreContext
 
 type ProductFormState = {
   nome: string;
   descricao: string;
   preco: string;
-  categoria: MenuCategory;
+  categoria: string;
   imagem: string;
   ativo: boolean;
   destaque: boolean;
@@ -19,7 +20,7 @@ const emptyProductForm: ProductFormState = {
   nome: '',
   descricao: '',
   preco: '',
-  categoria: 'Hambúrgueres',
+  categoria: '',
   imagem: '',
   ativo: true,
   destaque: false,
@@ -28,24 +29,20 @@ const emptyProductForm: ProductFormState = {
 export function AdminProductsPage() {
   usePageTitle('Admin Produtos');
 
-  const { produtos, setProdutos } = useMenuStore();
+  const { empresa, produtos, categorias, setProdutos } = useMenuStore();
 
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Garante fallback para demoMenuItems caso store esteja vazia
-  useEffect(() => {
-    if (!produtos.length) {
-      setProdutos(demoMenuItems);
-    }
-  }, [produtos.length, setProdutos]);
+  // Nomes das categorias vindos do Supabase via contexto
+  const categoriasNomes = categorias.map(c => c.nome);
 
   const submitLabel = useMemo(() => (editingProductId ? 'Salvar alterações' : 'Cadastrar produto'), [editingProductId]);
   const modalTitle = editingProductId ? 'Editar produto' : 'Novo produto';
 
   function resetForm() {
-    setForm(emptyProductForm);
+    setForm({ ...emptyProductForm, categoria: categoriasNomes[0] ?? '' });
     setEditingProductId(null);
   }
 
@@ -62,15 +59,18 @@ export function AdminProductsPage() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const category = demoCategorias.find((item) => item.nome === form.categoria);
+    // Usa empresa.id do contexto — nunca ID demo ou hardcoded
+    const empresaId = empresa?.id ?? '';
+    const categoriaMatch = categorias.find(c => c.nome === form.categoria);
+
     const product: MenuItem = {
       id: editingProductId ?? `produto-${Date.now()}`,
-      empresaId: demoEmpresa.id,
-      categoriaId: category?.id ?? 'categoria-1',
+      empresaId,
+      categoriaId: categoriaMatch?.id ?? '',
       nome: form.nome,
       descricao: form.descricao,
       preco: Number(form.preco),
-      categoria: form.categoria,
+      categoria: form.categoria as MenuCategory,
       imagem: form.imagem || 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=900&q=80',
       destaque: form.destaque,
       disponivel: form.ativo,
@@ -213,8 +213,8 @@ export function AdminProductsPage() {
                   <input required type="number" min="0" step="0.01" value={form.preco} onChange={(event) => setForm({ ...form, preco: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" />
                 </label>
                 <label className="block text-sm font-bold text-slate-700">Categoria
-                  <select value={form.categoria} onChange={(event) => setForm({ ...form, categoria: event.target.value as MenuCategory })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
-                    {menuCategories.map((category) => <option key={category}>{category}</option>)}
+                  <select value={form.categoria} onChange={(event) => setForm({ ...form, categoria: event.target.value })} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500">
+                    {categoriasNomes.map((category) => <option key={category}>{category}</option>)}
                   </select>
                 </label>
               </div>

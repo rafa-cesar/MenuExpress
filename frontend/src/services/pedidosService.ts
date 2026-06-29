@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { Pedido, PedidoItem, PedidoStatus, ModalidadeEntrega } from '../types/domain';
 
-const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+// Nenhum EMPRESA_ID fixo — empresaId é sempre passado pelo chamador
 
 function mapPedido(row: Record<string, unknown>): Pedido {
   return {
@@ -26,7 +26,7 @@ function mapPedido(row: Record<string, unknown>): Pedido {
 }
 
 export const pedidosService = {
-  async criar(pedido: {
+  async criar(empresaId: string, pedido: {
     modalidade: ModalidadeEntrega;
     clienteNome: string;
     clienteTel: string;
@@ -40,7 +40,7 @@ export const pedidosService = {
     const { data, error } = await supabase
       .from('pedidos')
       .insert({
-        empresa_id: EMPRESA_ID,
+        empresa_id: empresaId,
         status: 'aguardando',
         modalidade: pedido.modalidade,
         cliente_nome: pedido.clienteNome || null,
@@ -59,11 +59,11 @@ export const pedidosService = {
     return mapPedido(data as Record<string, unknown>);
   },
 
-  async listar(): Promise<Pedido[]> {
+  async listar(empresaId: string): Promise<Pedido[]> {
     const { data, error } = await supabase
       .from('pedidos')
       .select('*')
-      .eq('empresa_id', EMPRESA_ID)
+      .eq('empresa_id', empresaId)
       .not('status', 'in', '("finalizado","cancelado")')
       .order('criado_em', { ascending: true });
 
@@ -71,11 +71,11 @@ export const pedidosService = {
     return (data as Record<string, unknown>[]).map(mapPedido);
   },
 
-  async listarHistorico(): Promise<Pedido[]> {
+  async listarHistorico(empresaId: string): Promise<Pedido[]> {
     const { data, error } = await supabase
       .from('pedidos')
       .select('*')
-      .eq('empresa_id', EMPRESA_ID)
+      .eq('empresa_id', empresaId)
       .in('status', ['finalizado', 'cancelado'])
       .order('criado_em', { ascending: false })
       .limit(50);

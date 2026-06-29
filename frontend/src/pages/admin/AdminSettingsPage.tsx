@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase';
 import type { ConfigEntrega, EstiloVisual } from '../../types/domain';
 import type { Empresa } from '../../types/menu';
 
-const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+// Nenhum EMPRESA_ID fixo aqui — o id vem sempre do MenuStoreContext
 
 type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
@@ -132,6 +132,12 @@ export function AdminSettingsPage() {
     event.preventDefault();
     if (nenhumaModalidade) return;
 
+    // Guarda obrigatória: empresa.id deve estar carregado do Supabase
+    if (!empresa?.id) {
+      setErrorMessage('Empresa ainda não carregada. Aguarde e tente novamente.');
+      return;
+    }
+
     setSaving(true);
     setErrorMessage('');
 
@@ -146,7 +152,7 @@ export function AdminSettingsPage() {
       } : undefined,
     };
 
-    // Usa EMPRESA_ID fixo — nunca depende de empresa.id que pode ser nulo durante carregamento
+    // Usa empresa.id vindo do contexto — nunca um UUID hardcoded
     const { data: updatedRows, error } = await supabase
       .from('empresas')
       .update({
@@ -164,7 +170,7 @@ export function AdminSettingsPage() {
         horario_dias: form.dias,
         entrega: entregaObj,
       })
-      .eq('id', EMPRESA_ID)
+      .eq('id', empresa.id)
       .select('id');
 
     setSaving(false);
@@ -181,8 +187,7 @@ export function AdminSettingsPage() {
 
     // Atualiza o contexto com os dados confirmados pelo banco
     const empresaAtualizada: Empresa = {
-      ...(empresa ?? { id: EMPRESA_ID, slug: '', status: 'ativa' as const }),
-      id: EMPRESA_ID,
+      ...empresa,
       nome: form.nomeEmpresa, descricao: form.descricao, cidade: form.cidadeUf,
       whatsapp: form.whatsapp, corPrincipal: form.corPrincipal,
       logoUrl: form.logoUrl, estiloVisual: form.estiloVisual,
