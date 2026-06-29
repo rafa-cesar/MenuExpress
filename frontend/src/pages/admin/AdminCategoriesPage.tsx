@@ -1,9 +1,11 @@
 import { FormEvent, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
-import { demoEmpresa } from '../../data/menu';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { Categoria } from '../../types/menu';
 import { useMenuStore } from '../../context/MenuStoreContext';
+import { supabase } from '../../lib/supabase';
+
+const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 type CategoryFormState = {
   nome: string;
@@ -31,29 +33,62 @@ export function AdminCategoriesPage() {
 
   const { categorias, setCategorias } = useMenuStore();
   const [form, setForm] = useState<CategoryFormState>(emptyCategoryForm);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSalvando(true);
+    setErro(null);
 
-    const category: Categoria = {
-      id: `categoria-${Date.now()}`,
-      empresaId: demoEmpresa.id,
+    const novaCategoria = {
+      empresa_id: EMPRESA_ID,
       nome: form.nome,
       slug: slugify(form.nome),
       ordem: Number(form.ordem),
       ativa: form.ativa,
     };
 
-    setCategorias((currentCategories) =>
-      [...currentCategories, category].sort((a, b) => a.ordem - b.ordem),
+    const { data, error } = await supabase
+      .from('categorias')
+      .insert(novaCategoria)
+      .select()
+      .single();
+
+    setSalvando(false);
+
+    if (error || !data) {
+      setErro('Erro ao salvar categoria: ' + (error?.message ?? 'sem resposta do banco'));
+      return;
+    }
+
+    const categoriaAdicionada: Categoria = {
+      id: data.id,
+      empresaId: data.empresa_id,
+      nome: data.nome,
+      slug: data.slug,
+      ordem: data.ordem,
+      ativa: data.ativa,
+    };
+
+    setCategorias((current) =>
+      [...current, categoriaAdicionada].sort((a, b) => a.ordem - b.ordem),
     );
     setForm(emptyCategoryForm);
   }
 
-  function removeCategory(categoryId: string) {
-    setCategorias((currentCategories) =>
-      currentCategories.filter((category) => category.id !== categoryId),
-    );
+  async function removeCategory(categoryId: string) {
+    const { error } = await supabase
+      .from('categorias')
+      .delete()
+      .eq('id', categoryId);
+
+    if (error) {
+      alert('Erro ao remover categoria: ' + error.message);
+      return;
+    }
+
+    setCategorias((current) => current.filter((c) => c.id !== categoryId));
   }
 
   return (
@@ -125,13 +160,18 @@ export function AdminCategoriesPage() {
           className="h-fit rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
         >
           <h2 className="text-xl font-black text-slate-950">Nova categoria</h2>
+
+          {erro ? (
+            <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{erro}</p>
+          ) : null}
+
           <div className="mt-5 space-y-4">
             <label className="block text-sm font-bold text-slate-700">
               Nome
               <input
                 required
                 value={form.nome}
-                onChange={(event) => setForm({ ...form, nome: event.target.value })}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
                 className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"
               />
             </label>
@@ -142,7 +182,7 @@ export function AdminCategoriesPage() {
                 type="number"
                 min="1"
                 value={form.ordem}
-                onChange={(event) => setForm({ ...form, ordem: event.target.value })}
+                onChange={(e) => setForm({ ...form, ordem: e.target.value })}
                 className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"
               />
             </label>
@@ -150,15 +190,16 @@ export function AdminCategoriesPage() {
               <input
                 type="checkbox"
                 checked={form.ativa}
-                onChange={(event) => setForm({ ...form, ativa: event.target.checked })}
+                onChange={(e) => setForm({ ...form, ativa: e.target.checked })}
               />{' '}
               Categoria ativa
             </label>
             <button
               type="submit"
-              className="w-full rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700"
+              disabled={salvando}
+              className="w-full rounded-full bg-brand-600 px-5 py-3 font-black text-white hover:bg-brand-700 disabled:opacity-60"
             >
-              Cadastrar categoria
+              {salvando ? 'Salvando...' : 'Cadastrar categoria'}
             </button>
           </div>
         </form>
