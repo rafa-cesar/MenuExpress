@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MenuCard } from '../components/MenuCard';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useStoreStatus } from '../hooks/useStoreStatus';
@@ -52,7 +52,6 @@ function EmpresaAvatar({
     );
   }
 
-  // Fallback: círculo com as iniciais do nome da empresa
   return (
     <div
       className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.25rem] border-2 border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
@@ -135,7 +134,6 @@ function ConfirmacaoScreen({
         </button>
       </div>
 
-      {/* Crédito YellowTech */}
       <p className="mt-8 text-xs text-slate-400">
         Powered by <strong className="text-slate-500">YellowTech</strong>
       </p>
@@ -149,20 +147,16 @@ export function MenuPage() {
   const { empresa, produtos, categorias, loading, erro } = useMenuStore();
   const storeStatus = useStoreStatus();
 
-  // Categorias vêm exclusivamente do Supabase via useMenuStore()
   const menuCategories = categorias.map(c => c.nome) as MenuCategory[];
 
-  // selectedCategory inicia com a primeira categoria real do banco
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | null>(null);
 
-  // ─── Todos os hooks ANTES de qualquer early return ───────────────────────
   const [cartItems, setCartItems]             = useState<CartItem[]>([]);
   const [orderNote, setOrderNote]             = useState('');
   const [checkoutMessage, setCheckoutMessage] = useState('');
   const [salvando, setSalvando]               = useState(false);
   const [pedidoFeito, setPedidoFeito]         = useState<Pedido | null>(null);
 
-  // cfg depende de empresa — usamos um fallback seguro enquanto empresa é null
   const cfg: ConfigEntrega = empresa?.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
   const defaultModalidade: ModalidadeEntrega = cfg.entregaAtiva && !cfg.retiradaAtiva ? 'entrega' : 'retirada';
 
@@ -181,9 +175,7 @@ export function MenuPage() {
       setSelectedCategory(menuCategories[0]);
     }
   }, [menuCategories, selectedCategory]);
-  // ─────────────────────────────────────────────────────────────────────────
 
-  // ─── Guards: loading e erro após todos os hooks ───────────────────────
   if (loading) {
     return (
       <section className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -213,8 +205,10 @@ export function MenuPage() {
       </section>
     );
   }
-  // A partir daqui empresa é Empresa (não null) — TypeScript sabe disso
-  // ─────────────────────────────────────────────────────────────────────────
+
+  // empresa é Empresa (não null) a partir daqui — extraímos para que TypeScript
+  // mantenha o narrowing dentro das funções aninhadas abaixo.
+  const empresaData = empresa;
 
   const ambasAtivas = cfg.retiradaAtiva && cfg.entregaAtiva;
 
@@ -274,7 +268,7 @@ export function MenuPage() {
     setCheckoutMessage('');
     setSalvando(true);
 
-    const pedido = await pedidosService.criar(empresa.id, {
+    const pedido = await pedidosService.criar(empresaData.id, {
       modalidade, clienteNome, clienteTel, clienteEnd,
       itens: cartItems.map((i) => ({
         nome: i.product.nome,
@@ -308,8 +302,8 @@ export function MenuPage() {
   if (pedidoFeito) {
     return (
       <ConfirmacaoScreen
-        pedido={pedidoFeito} empresa={empresa}
-        whatsappMsg={buildMsg()} whatsapp={empresa.whatsapp}
+        pedido={pedidoFeito} empresa={empresaData}
+        whatsappMsg={buildMsg()} whatsapp={empresaData.whatsapp}
         brand={brand} onNovoPedido={handleNovoPedido}
       />
     );
@@ -329,11 +323,10 @@ export function MenuPage() {
         <div className="overflow-hidden rounded-[2rem] text-white shadow-2xl" style={{ background: brand.heroGradient }}>
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
             <div>
-              {/* Logomarca em destaque — acima do título */}
               <div className="mb-5 flex items-end gap-4">
                 <EmpresaAvatar
-                  logoUrl={empresa.logoUrl}
-                  nome={empresa.nome}
+                  logoUrl={empresaData.logoUrl}
+                  nome={empresaData.nome}
                   primary={brand.primary}
                 />
                 <div className="flex flex-wrap items-center gap-2 pb-1">
@@ -346,9 +339,9 @@ export function MenuPage() {
                 </div>
               </div>
 
-              <h1 className={`text-4xl sm:text-5xl ${brand.titleClass}`}>{empresa.nome}</h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-white/85">{empresa.descricao}</p>
-              <p className="mt-4 text-sm font-semibold text-white/75">📍 {empresa.cidade}</p>
+              <h1 className={`text-4xl sm:text-5xl ${brand.titleClass}`}>{empresaData.nome}</h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-white/85">{empresaData.descricao}</p>
+              <p className="mt-4 text-sm font-semibold text-white/75">📍 {empresaData.cidade}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {cfg.retiradaAtiva && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🏠 Retirada disponível</span>}
                 {cfg.entregaAtiva  && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(cfg.taxaEntregaFixa)}</span>}
@@ -367,7 +360,6 @@ export function MenuPage() {
           </div>
         </div>
 
-        {/* Categorias — geradas exclusivamente do banco via useMenuStore() */}
         {menuCategories.length > 0 && (
           <div className="sticky top-0 z-20 -mx-4 mt-6 border-y border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-full sm:border">
             <div className="flex gap-2 overflow-x-auto pb-1 sm:justify-center sm:pb-0">
@@ -437,7 +429,6 @@ export function MenuPage() {
         />
       </div>
 
-      {/* Rodapé do cardápio */}
       <div className="px-4 pb-6 pt-10 text-center">
         <p className="text-xs text-slate-400">
           Cardápio digital por <strong className="text-slate-500">YellowTech</strong>
@@ -520,7 +511,6 @@ function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessag
             }
           </div>
 
-          {/* Dados do cliente */}
           <div className="mt-5 space-y-3">
             <div>
               <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Seu nome</label>
@@ -543,7 +533,6 @@ function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessag
             </div>
           </div>
 
-          {/* Resumo de valores */}
           <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
             <div className="flex justify-between text-sm text-slate-500">
               <span>Subtotal</span><span>{fmt.format(subtotal)}</span>
