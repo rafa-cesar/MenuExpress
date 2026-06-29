@@ -155,18 +155,35 @@ export function MenuPage() {
   // selectedCategory inicia com a primeira categoria real do banco
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | null>(null);
 
-  useEffect(() => {
-    if (menuCategories.length > 0 && selectedCategory === null) {
-      setSelectedCategory(menuCategories[0]);
-    }
-  }, [menuCategories, selectedCategory]);
+  // ─── Todos os hooks ANTES de qualquer early return ───────────────────────
+  const [cartItems, setCartItems]             = useState<CartItem[]>([]);
+  const [orderNote, setOrderNote]             = useState('');
+  const [checkoutMessage, setCheckoutMessage] = useState('');
+  const [salvando, setSalvando]               = useState(false);
+  const [pedidoFeito, setPedidoFeito]         = useState<Pedido | null>(null);
+
+  // cfg depende de empresa — usamos um fallback seguro enquanto empresa é null
+  const cfg: ConfigEntrega = empresa?.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
+  const defaultModalidade: ModalidadeEntrega = cfg.entregaAtiva && !cfg.retiradaAtiva ? 'entrega' : 'retirada';
+
+  const [modalidade, setModalidade]   = useState<ModalidadeEntrega>(defaultModalidade);
+  const [clienteNome, setClienteNome] = useState('');
+  const [clienteTel, setClienteTel]   = useState('');
+  const [clienteEnd, setClienteEnd]   = useState('');
 
   const brand = useBrand(
     empresa?.corPrincipal ?? '#f97316',
     empresa?.estiloVisual ?? 'moderno',
   );
 
-  // ─── Guards: loading e erro antes de renderizar o cardápio ───────────────
+  useEffect(() => {
+    if (menuCategories.length > 0 && selectedCategory === null) {
+      setSelectedCategory(menuCategories[0]);
+    }
+  }, [menuCategories, selectedCategory]);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ─── Guards: loading e erro após todos os hooks ───────────────────────
   if (loading) {
     return (
       <section className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -199,30 +216,15 @@ export function MenuPage() {
   // A partir daqui empresa é Empresa (não null) — TypeScript sabe disso
   // ─────────────────────────────────────────────────────────────────────────
 
-  const cfg: ConfigEntrega = empresa.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
   const ambasAtivas = cfg.retiradaAtiva && cfg.entregaAtiva;
-  const defaultModalidade: ModalidadeEntrega = cfg.entregaAtiva && !cfg.retiradaAtiva ? 'entrega' : 'retirada';
-
-  const [cartItems, setCartItems]               = useState<CartItem[]>([]);
-  const [orderNote, setOrderNote]               = useState('');
-  const [checkoutMessage, setCheckoutMessage]   = useState('');
-  const [modalidade, setModalidade]             = useState<ModalidadeEntrega>(defaultModalidade);
-  const [clienteNome, setClienteNome]           = useState('');
-  const [clienteTel, setClienteTel]             = useState('');
-  const [clienteEnd, setClienteEnd]             = useState('');
-  const [salvando, setSalvando]                 = useState(false);
-  const [pedidoFeito, setPedidoFeito]           = useState<Pedido | null>(null);
 
   const activeCategory = selectedCategory ?? menuCategories[0] ?? null;
 
-  const filteredItems  = useMemo(
-    () => activeCategory ? produtos.filter((item) => item.categoria === activeCategory) : [],
-    [produtos, activeCategory],
-  );
-  const subtotal       = useMemo(() => cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0), [cartItems]);
+  const filteredItems  = produtos.filter((item) => item.categoria === activeCategory);
+  const subtotal       = cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0);
   const taxa           = modalidade === 'entrega' && cfg.entregaAtiva ? cfg.taxaEntregaFixa : 0;
   const total          = subtotal + taxa;
-  const totalItems     = useMemo(() => cartItems.reduce((t, i) => t + i.quantity, 0), [cartItems]);
+  const totalItems     = cartItems.reduce((t, i) => t + i.quantity, 0);
   const abaixoDoMinimo = modalidade === 'entrega' && cfg.pedidoMinimoEntrega > 0 && subtotal < cfg.pedidoMinimoEntrega;
 
   function getQty(id: string) { return cartItems.find((i) => i.product.id === id)?.quantity ?? 0; }
@@ -272,7 +274,6 @@ export function MenuPage() {
     setCheckoutMessage('');
     setSalvando(true);
 
-    // empresa.id é seguro aqui: o guard `if (!empresa) return` acima garante que empresa !== null
     const pedido = await pedidosService.criar(empresa.id, {
       modalidade, clienteNome, clienteTel, clienteEnd,
       itens: cartItems.map((i) => ({
@@ -510,58 +511,63 @@ function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessag
                     <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2 py-1">
                       <button type="button" onClick={() => onDecrement(item.product.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-black shadow-sm">−</button>
                       <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
-                      <button type="button" onClick={() => onIncrement(item.product.id)} className="flex h-7 w-7 items-center justify-center text-sm font-black shadow-sm" style={{ backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: '50%' }}>+</button>
+                      <button type="button" onClick={() => onIncrement(item.product.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-black shadow-sm">+</button>
                     </div>
-                    <p className="text-sm font-bold">{fmt.format(item.product.preco * item.quantity)}</p>
+                    <p className="text-sm font-black text-slate-950">{fmt.format(item.product.preco * item.quantity)}</p>
                   </div>
                 </div>
-              ))}
+              ))
+            }
           </div>
-          <div className="mt-4 space-y-3">
-            <p className="text-sm font-black text-slate-700">Seus dados</p>
-            <label className="block text-sm font-bold text-slate-600">Nome
-              <input value={clienteNome} onChange={(e) => onNome(e.target.value)} placeholder="Seu nome" className={inputClass} />
-            </label>
-            <label className="block text-sm font-bold text-slate-600">Telefone
-              <input value={clienteTel} onChange={(e) => onTel(e.target.value)} placeholder="(11) 99999-9999" className={inputClass} />
-            </label>
+
+          {/* Dados do cliente */}
+          <div className="mt-5 space-y-3">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Seu nome</label>
+              <input type="text" placeholder="Nome completo" value={clienteNome} onChange={(e) => onNome(e.target.value)} className={inputClass} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Telefone</label>
+              <input type="tel" placeholder="(11) 99999-9999" value={clienteTel} onChange={(e) => onTel(e.target.value)} className={inputClass} />
+            </div>
             {modalidade === 'entrega' && (
-              <label className="block text-sm font-bold text-slate-600">Endereço de entrega
-                <input value={clienteEnd} onChange={(e) => onEnd(e.target.value)} placeholder="Rua, número, bairro" className={inputClass} />
-              </label>
-            )}
-            {modalidade === 'retirada' && cfg.endereco && (
-              <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                <p className="text-xs font-black text-slate-600">📌 Endereço para retirada</p>
-                <p className="mt-1 text-sm text-slate-700">{cfg.endereco.rua}, {cfg.endereco.numero} — {cfg.endereco.bairro}, {cfg.endereco.cidade}</p>
-                {cfg.endereco.complemento && <p className="text-xs text-slate-500">{cfg.endereco.complemento}</p>}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Endereço de entrega</label>
+                <input type="text" placeholder="Rua, número, bairro" value={clienteEnd} onChange={(e) => onEnd(e.target.value)} className={inputClass} />
               </div>
             )}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Observações</label>
+              <textarea rows={2} placeholder="Alguma observação?" value={orderNote} onChange={(e) => onOrderNoteChange(e.target.value)}
+                className={`${inputClass} resize-none`} />
+            </div>
           </div>
-          <div className="mt-4 space-y-1 rounded-2xl bg-slate-50 p-4">
-            <div className="flex justify-between text-sm"><span className="text-slate-500">Subtotal</span><span className="font-bold">{fmt.format(subtotal)}</span></div>
-            {taxa > 0 && <div className="flex justify-between text-sm"><span className="text-slate-500">Taxa de entrega</span><span className="font-bold">{fmt.format(taxa)}</span></div>}
-            <div className="flex justify-between border-t border-slate-200 pt-2"><span className="font-black text-slate-900">Total</span><span className="font-black" style={{ color: brand.primary }}>{fmt.format(total)}</span></div>
+
+          {/* Resumo de valores */}
+          <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>Subtotal</span><span>{fmt.format(subtotal)}</span>
+            </div>
+            {taxa > 0 && (
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>Taxa de entrega</span><span>{fmt.format(taxa)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-black text-slate-950">
+              <span>Total</span><span style={{ color: brand.primary }}>{fmt.format(total)}</span>
+            </div>
           </div>
-          <label className="mt-4 block text-sm font-bold text-slate-600">Observação
-            <textarea value={orderNote} onChange={(e) => onOrderNoteChange(e.target.value)} disabled={!storeAberta} rows={2} placeholder="Ex: tirar a cebola..." className={`${inputClass} resize-none`} />
-          </label>
         </>
       )}
-      {compact && (
-        <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-          <div className="text-center"><p className="text-xs text-slate-400">Itens</p><p className="font-black">{cartItems.length}</p></div>
-          <div className="text-center"><p className="text-xs text-slate-400">Taxa</p><p className="font-black">{fmt.format(taxa)}</p></div>
-          <div className="text-center"><p className="text-xs text-slate-400">Total</p><p className="font-black" style={{ color: brand.primary }}>{fmt.format(total)}</p></div>
-        </div>
-      )}
+
       {checkoutMessage && (
-        <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{checkoutMessage}</p>
+        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{checkoutMessage}</p>
       )}
-      <button type="button" onClick={onCheckout} disabled={!storeAberta || abaixoDoMinimo || salvando}
-        className="mt-4 w-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
+
+      <button type="button" onClick={onCheckout} disabled={!storeAberta || salvando}
+        className="mt-4 w-full rounded-full py-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 transition"
         style={btnStyle}>
-        {salvando ? 'Registrando pedido...' : storeAberta ? 'Fazer Pedido' : '🔴 Loja Fechada'}
+        {salvando ? 'Registrando pedido...' : storeAberta ? (compact ? `Pedir • ${fmt.format(total)}` : 'Confirmar Pedido') : 'Loja Fechada'}
       </button>
     </div>
   );
