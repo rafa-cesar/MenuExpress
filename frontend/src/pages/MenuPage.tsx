@@ -17,6 +17,55 @@ const MOTIVO_LABEL: Record<string, string> = {
   dia_inativo: 'Não abrimos neste dia da semana.',
 };
 
+// ─── Avatar / Logomarca do estabelecimento ──────────────────────────────────
+function EmpresaAvatar({
+  logoUrl,
+  nome,
+  primary,
+}: {
+  logoUrl?: string | null;
+  nome: string;
+  primary: string;
+}) {
+  const initials = nome
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+
+  if (logoUrl) {
+    return (
+      <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24">
+        <div
+          className="absolute inset-0 rounded-[1.25rem] shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
+          style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)' }}
+        />
+        <img
+          src={logoUrl}
+          alt={`Logo ${nome}`}
+          width={96}
+          height={96}
+          loading="lazy"
+          className="relative h-full w-full rounded-[1.25rem] border-2 border-white/30 bg-white object-cover shadow-lg"
+        />
+      </div>
+    );
+  }
+
+  // Fallback: círculo com as iniciais do nome da empresa
+  return (
+    <div
+      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.25rem] border-2 border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
+      style={{ backgroundColor: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)' }}
+      aria-label={`Logomarca de ${nome}`}
+    >
+      <span className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+        {initials}
+      </span>
+    </div>
+  );
+}
+
 // ─── Tela de confirmação pós-pedido ─────────────────────────────────────
 function ConfirmacaoScreen({
   pedido, empresa, whatsappMsg, whatsapp, brand, onNovoPedido,
@@ -279,14 +328,24 @@ export function MenuPage() {
         <div className="overflow-hidden rounded-[2rem] text-white shadow-2xl" style={{ background: brand.heroGradient }}>
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
             <div>
-              <div className="flex flex-wrap items-center gap-3">
-                {empresa.logoUrl && <img src={empresa.logoUrl} alt={empresa.nome} className="h-14 w-14 rounded-2xl bg-white object-cover p-1 shadow-lg" />}
-                <span className="rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: `${brand.primary}33`, color: '#fff' }}>Cardápio digital</span>
-                <span className={`rounded-full px-3 py-1 text-xs font-black ${storeStatus.aberta ? 'bg-emerald-500/20 text-emerald-100' : 'bg-red-500/20 text-red-100'}`}>
-                  {storeStatus.aberta ? '🟢 Aberta' : '🔴 Fechada'}
-                </span>
+              {/* Logomarca em destaque — acima do título */}
+              <div className="mb-5 flex items-end gap-4">
+                <EmpresaAvatar
+                  logoUrl={empresa.logoUrl}
+                  nome={empresa.nome}
+                  primary={brand.primary}
+                />
+                <div className="flex flex-wrap items-center gap-2 pb-1">
+                  <span className="rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: `${brand.primary}33`, color: '#fff' }}>Cardápio digital</span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${
+                    storeStatus.aberta ? 'bg-emerald-500/20 text-emerald-100' : 'bg-red-500/20 text-red-100'
+                  }`}>
+                    {storeStatus.aberta ? '🟢 Aberta' : '🔴 Fechada'}
+                  </span>
+                </div>
               </div>
-              <h1 className={`mt-4 text-4xl sm:text-5xl ${brand.titleClass}`}>{empresa.nome}</h1>
+
+              <h1 className={`text-4xl sm:text-5xl ${brand.titleClass}`}>{empresa.nome}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-white/85">{empresa.descricao}</p>
               <p className="mt-4 text-sm font-semibold text-white/75">📍 {empresa.cidade}</p>
               <div className="mt-4 flex flex-wrap gap-2">
