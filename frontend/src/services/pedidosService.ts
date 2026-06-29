@@ -52,10 +52,20 @@ export const pedidosService = {
         taxa_entrega: pedido.taxaEntrega,
         total: pedido.total,
       })
+      // .select().single() confirma que a linha foi persistida antes de retornar sucesso.
+      // Sem isso, um erro de RLS ou constraint silencioso retornaria null e o
+      // cardápio exibiria "Erro ao registrar pedido" sem motivo claro.
       .select()
       .single();
 
-    if (error) { console.error('[pedidosService.criar]', error); return null; }
+    if (error) {
+      console.error('[pedidosService.criar] Erro ao inserir pedido:', error.message, error.details);
+      return null;
+    }
+    if (!data) {
+      console.error('[pedidosService.criar] Insert executado mas nenhuma linha retornada.');
+      return null;
+    }
     return mapPedido(data as Record<string, unknown>);
   },
 
@@ -67,7 +77,7 @@ export const pedidosService = {
       .not('status', 'in', '("finalizado","cancelado")')
       .order('criado_em', { ascending: true });
 
-    if (error) { console.error('[pedidosService.listar]', error); return []; }
+    if (error) { console.error('[pedidosService.listar]', error.message); return []; }
     return (data as Record<string, unknown>[]).map(mapPedido);
   },
 
@@ -80,7 +90,7 @@ export const pedidosService = {
       .order('criado_em', { ascending: false })
       .limit(50);
 
-    if (error) { console.error('[pedidosService.listarHistorico]', error); return []; }
+    if (error) { console.error('[pedidosService.listarHistorico]', error.message); return []; }
     return (data as Record<string, unknown>[]).map(mapPedido);
   },
 
@@ -90,16 +100,20 @@ export const pedidosService = {
       .from('pedidos')
       .update({ status: 'em_preparo', estimativa_minutos: estimativaMinutos, previsao_em: previsaoEm })
       .eq('id', id);
-    if (error) { console.error('[pedidosService.iniciarPreparo]', error); return false; }
+    if (error) { console.error('[pedidosService.iniciarPreparo]', error.message); return false; }
     return true;
   },
 
   async atualizarStatus(id: string, status: PedidoStatus): Promise<boolean> {
+    // Confirma com .select() que a linha foi atualizada e visível após o update.
+    // Caso a policy de RLS bloqueie o update, o .select() retornará erro, expondo o problema.
     const { error } = await supabase
       .from('pedidos')
       .update({ status })
-      .eq('id', id);
-    if (error) { console.error('[pedidosService.atualizarStatus]', error); return false; }
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) { console.error('[pedidosService.atualizarStatus]', error.message, '— pedido id:', id); return false; }
     return true;
   },
 };

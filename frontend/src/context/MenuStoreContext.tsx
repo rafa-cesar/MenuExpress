@@ -5,6 +5,9 @@ import type { ConfigEntrega, EmpresaStatus } from '../types/domain';
 import type { MenuCategory } from '../types/menu';
 import type { EstiloVisual } from '../types/domain';
 
+// EMPRESA_ID fixo: solução monoempresa para o MVP.
+// Para evoluir para SaaS multiempresa, este valor deve ser substituído
+// pela descoberta dinâmica via slug da rota ou auth.uid() → owner_id.
 const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 export type MenuStoreState = {
@@ -69,17 +72,19 @@ function mapEmpresa(row: Record<string, unknown>): Empresa {
     nome: row.nome as string,
     slug: (row.slug as string) ?? '',
     status: (row.status as EmpresaStatus) ?? 'ativa',
-    descricao: row.descricao as string,
-    cidade: row.cidade as string,
-    whatsapp: row.whatsapp as string,
-    corPrincipal: row.cor_principal as string,
+    descricao: (row.descricao as string) ?? '',
+    cidade: (row.cidade as string) ?? '',
+    // instagram mapeado explicitamente para evitar campo ausente no objeto
+    instagram: (row.instagram as string) ?? '',
+    whatsapp: (row.whatsapp as string) ?? '',
+    corPrincipal: (row.cor_principal as string) ?? '#f97316',
     estiloVisual: (row.estilo_visual as EstiloVisual) ?? 'moderno',
-    taxaEntrega: Number(row.taxa_entrega),
-    pedidoMinimo: Number(row.pedido_minimo),
+    taxaEntrega: Number(row.taxa_entrega ?? 0),
+    pedidoMinimo: Number(row.pedido_minimo ?? 0),
     logoUrl: (row.logo_url as string) ?? '',
     horario: {
-      status: row.horario_status as Empresa['horario']['status'],
-      mensagemCliente: row.horario_mensagem_cliente as string,
+      status: (row.horario_status as Empresa['horario']['status']) ?? 'automatico',
+      mensagemCliente: (row.horario_mensagem_cliente as string) ?? '',
       dias: row.horario_dias as Empresa['horario']['dias'],
     },
     entrega: entregaRaw ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 },
@@ -103,10 +108,10 @@ function mapProduto(row: Record<string, unknown>): MenuItem {
     empresaId: row.empresa_id as string,
     categoriaId: (row.categoria_id as string) ?? '',
     nome: row.nome as string,
-    descricao: row.descricao as string,
-    preco: Number(row.preco),
+    descricao: (row.descricao as string) ?? '',
+    preco: Number(row.preco ?? 0),
     categoria: row.categoria as MenuCategory,
-    imagem: row.imagem as string,
+    imagem: (row.imagem as string) ?? '',
     destaque: Boolean(row.destaque),
     disponivel: Boolean(row.disponivel),
   };
@@ -127,7 +132,7 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [empresa?.corPrincipal]);
 
-  // Wrapper que injeta vars imediatamente ao setar empresa (ex: após salvar)
+  // Wrapper que injeta vars imediatamente ao setar empresa (ex: após salvar no admin)
   const setEmpresa = (e: Empresa) => {
     applyBrandVars(e.corPrincipal ?? '#f97316');
     setEmpresaState(e);
@@ -154,7 +159,7 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
         }
 
         setEmpresa(mapEmpresa(empresaData as Record<string, unknown>));
-        // Sempre sobrescreve o estado — array vazio é um resultado válido
+        // Sempre sobrescreve o estado — array vazio é resultado válido (sem categorias/produtos cadastrados)
         setCategorias((categoriasData ?? []).map(mapCategoria));
         setProdutos((produtosData ?? []).map(mapProduto));
       } catch (error) {
