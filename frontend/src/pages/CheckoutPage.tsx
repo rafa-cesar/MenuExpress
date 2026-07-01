@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useCart } from '../context/CartContext';
 import { useClienteAuth } from '../context/ClienteAuthContext';
@@ -11,25 +11,25 @@ import type { FormaPagamento, Pedido } from '../types/domain';
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const PAGAMENTOS: { value: FormaPagamento; label: string; icon: string }[] = [
-  { value: 'pix',           label: 'Pix',            icon: '⚡' },
-  { value: 'dinheiro',      label: 'Dinheiro',       icon: '💵' },
+  { value: 'pix',            label: 'Pix',            icon: '⚡' },
+  { value: 'dinheiro',       label: 'Dinheiro',       icon: '💵' },
   { value: 'cartao_credito', label: 'Cartão Crédito', icon: '💳' },
-  { value: 'cartao_debito', label: 'Cartão Débito',  icon: '💳' },
+  { value: 'cartao_debito',  label: 'Cartão Débito',  icon: '💳' },
 ];
 
 const STATUS_LABEL: Record<string, string> = {
-  aguardando:       '⏳ Aguardando confirmação',
-  em_preparo:       '👨‍🍳 Em preparo',
-  pronto_retirada:  '✅ Pronto para retirada',
-  saiu_entrega:     '🚚 Saiu para entrega',
-  finalizado:       '🎉 Finalizado',
-  cancelado:        '❌ Cancelado',
+  aguardando:      '⏳ Aguardando confirmação',
+  em_preparo:      '👨‍🍳 Em preparo',
+  pronto_retirada: '✅ Pronto para retirada',
+  saiu_entrega:    '🚚 Saiu para entrega',
+  finalizado:      '🎉 Finalizado',
+  cancelado:       '❌ Cancelado',
 };
 
 export function CheckoutPage() {
   const { items, modalidade, formaPagamento, setFormaPagamento, observacao, subtotal, clear } = useCart();
   const { empresa } = useMenuStore();
-  const { perfil, user } = useClienteAuth();
+  const { perfil, user, loading: authLoading } = useClienteAuth();
   const navigate = useNavigate();
   const brand = useBrand(empresa?.corPrincipal ?? '#f97316', empresa?.estiloVisual ?? 'moderno');
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
@@ -37,23 +37,28 @@ export function CheckoutPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [pedidoFeito, setPedidoFeito] = useState<Pedido | null>(null);
-  const [clienteEnd, setClienteEnd] = useState(perfil?.endereco ? `${perfil.endereco.rua}, ${perfil.endereco.numero} — ${perfil.endereco.bairro}` : '');
+  const [clienteEnd, setClienteEnd] = useState(
+    perfil?.endereco ? `${perfil.endereco.rua}, ${perfil.endereco.numero} — ${perfil.endereco.bairro}` : ''
+  );
 
   const cfg = empresa?.entrega;
   const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? cfg.taxaEntregaFixa : 0;
   const total = subtotal + taxa;
 
-  if (!user) {
+  // Aguarda auth carregar antes de redirecionar
+  useEffect(() => {
+    if (authLoading) return;
+    // Não logado → vai para login
+    if (!user) { navigate({ to: '/checkout/auth' }); return; }
+    // Logado mas sem perfil → vai completar perfil
+    if (!perfil) { navigate({ to: '/checkout/auth' }); return; }
+  }, [authLoading, user, perfil, navigate]);
+
+  // Loading enquanto auth resolve
+  if (authLoading || (!perfil && !pedidoFeito)) {
     return (
-      <section className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
-          <div className="text-5xl">🔒</div>
-          <h1 className="mt-4 text-2xl font-black text-slate-900">Entre para finalizar</h1>
-          <p className="mt-2 text-slate-500">Faça login para confirmar seu pedido e acompanhá-lo.</p>
-          <button onClick={() => navigate({ to: '/checkout/auth' })} className="mt-6 w-full rounded-full py-4 font-black text-white" style={btnStyle}>
-            Entrar / Criar conta
-          </button>
-        </div>
+      <section className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
       </section>
     );
   }
@@ -120,7 +125,10 @@ export function CheckoutPage() {
   }
 
   async function confirmar() {
-    if (!empresa || !perfil) return;
+    if (!empresa || !perfil) {
+      navigate({ to: '/checkout/auth' });
+      return;
+    }
     setSalvando(true); setErro('');
     const pedido = await pedidosService.criar(empresa.id, {
       modalidade,
@@ -151,18 +159,15 @@ export function CheckoutPage() {
         {/* Cliente */}
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-3">
-            {perfil?.fotoUrl
+            {perfil.fotoUrl
               ? <img src={perfil.fotoUrl} className="h-10 w-10 rounded-full" alt="foto" />
-              : <div className="flex h-10 w-10 items-center justify-center rounded-full text-white text-sm font-black" style={{ backgroundColor: brand.primary }}>{perfil?.nome?.[0]?.toUpperCase()}</div>
+              : <div className="flex h-10 w-10 items-center justify-center rounded-full text-white text-sm font-black" style={{ backgroundColor: brand.primary }}>{perfil.nome?.[0]?.toUpperCase()}</div>
             }
             <div>
-              <p className="font-black text-slate-900">{perfil?.nome}</p>
-              <p className="text-xs text-slate-500">{perfil?.whatsapp ?? user?.email}</p>
+              <p className="font-black text-slate-900">{perfil.nome}</p>
+              <p className="text-xs text-slate-500">{perfil.whatsapp ?? user?.email}</p>
             </div>
           </div>
-          {!perfil?.whatsapp && (
-            <p className="mt-3 text-xs text-amber-600 font-bold">⚠️ Complete seu perfil para receber notificações no WhatsApp.</p>
-          )}
         </div>
 
         {/* Endereço de entrega */}
