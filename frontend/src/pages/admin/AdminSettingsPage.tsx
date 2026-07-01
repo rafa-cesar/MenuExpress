@@ -1,13 +1,12 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
+import { LogoUploader } from '../../components/admin/LogoUploader';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import { useBrand } from '../../hooks/useBrand';
 import { supabase } from '../../lib/supabase';
 import type { ConfigEntrega, EstiloVisual } from '../../types/domain';
 import type { Empresa } from '../../types/menu';
-
-// Nenhum EMPRESA_ID fixo aqui — o id vem sempre do MenuStoreContext
 
 type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
@@ -57,7 +56,6 @@ type SettingsFormState = {
   endRua: string; endNumero: string; endBairro: string; endCidade: string; endComplemento: string;
 };
 
-// Aceita Empresa | null — usa fallbacks seguros para estado de carregamento
 function buildForm(empresa: Empresa | null): SettingsFormState {
   const e: ConfigEntrega = { ...ENTREGA_PADRAO, ...empresa?.entrega };
   return {
@@ -111,7 +109,6 @@ export function AdminSettingsPage() {
   const initializedRef = useRef(false);
   const [form, setForm] = useState<SettingsFormState>(() => buildForm(empresa));
 
-  // Popula o form UMA ÚNICA VEZ quando os dados reais chegam do Supabase
   useEffect(() => {
     if (!loading && empresa && !initializedRef.current) {
       initializedRef.current = true;
@@ -132,7 +129,6 @@ export function AdminSettingsPage() {
     event.preventDefault();
     if (nenhumaModalidade) return;
 
-    // Guarda obrigatória: empresa.id deve estar carregado do Supabase
     if (!empresa?.id) {
       setErrorMessage('Empresa ainda não carregada. Aguarde e tente novamente.');
       return;
@@ -152,7 +148,6 @@ export function AdminSettingsPage() {
       } : undefined,
     };
 
-    // Usa empresa.id vindo do contexto — nunca um UUID hardcoded
     const { data: updatedRows, error } = await supabase
       .from('empresas')
       .update({
@@ -185,7 +180,6 @@ export function AdminSettingsPage() {
       return;
     }
 
-    // Atualiza o contexto com os dados confirmados pelo banco
     const empresaAtualizada: Empresa = {
       ...empresa,
       nome: form.nomeEmpresa, descricao: form.descricao, cidade: form.cidadeUf,
@@ -204,7 +198,6 @@ export function AdminSettingsPage() {
 
   const inputClass = 'mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400';
 
-  // Mostra carregando enquanto os dados do banco não chegam
   if (loading) {
     return (
       <section className="flex min-h-[60vh] items-center justify-center">
@@ -228,11 +221,23 @@ export function AdminSettingsPage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <h2 className="mb-1 text-lg font-black text-slate-950">Identidade da marca</h2>
           <p className="mb-5 text-sm text-slate-500">Sua cor e logo aparecem em destaque no cardápio. O estilo define o clima visual sem sobrepor suas cores.</p>
+
           <div className="grid gap-5 lg:grid-cols-2">
-            <label className="block text-sm font-bold text-slate-700 lg:col-span-2">
-              URL da logo <span className="font-normal text-slate-400">(upload real disponível após deploy)</span>
-              <input value={form.logoUrl} onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))} placeholder="https://..." className={inputClass} />
-            </label>
+
+            {/* ── LOGO UPLOADER ─────────────────────────────────────── */}
+            <div className="lg:col-span-2">
+              {empresa?.id ? (
+                <LogoUploader
+                  empresaId={empresa.id}
+                  currentLogoUrl={form.logoUrl}
+                  onUploaded={(url) => setForm((f) => ({ ...f, logoUrl: url }))}
+                />
+              ) : (
+                <p className="text-sm text-slate-400">Carregando dados da empresa...</p>
+              )}
+            </div>
+            {/* ─────────────────────────────────────────────────────── */}
+
             <label className="block text-sm font-bold text-slate-700">
               Nome da empresa
               <input value={form.nomeEmpresa} onChange={(e) => setForm((f) => ({ ...f, nomeEmpresa: e.target.value }))} placeholder="Ex: Burger House" className={inputClass} />
