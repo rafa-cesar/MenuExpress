@@ -28,4 +28,4 @@ export type MenuCatalog = {
   produtos: MenuItem[];
 };
 
-export type { Categoria, Cliente, Empresa, Pedido, Produto } from './domain';
+export type { Categoria, ClientePerfil, Empresa, Pedido, Produto } from './domain';
