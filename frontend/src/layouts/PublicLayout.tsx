@@ -2,7 +2,6 @@ import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Rotas que renderizam sozinhas, sem header/footer do PublicLayout
 const STANDALONE_ROUTES = ['/', '/assinar', '/login', '/cadastro', '/cardapio'];
 
 export function PublicLayout() {
@@ -10,10 +9,30 @@ export function PublicLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setIsAdmin(!!data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => setIsAdmin(!!session));
+    async function checkAdmin() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+      if (!userId) { setIsAdmin(false); return; }
+
+      // Extrai o slug da URL: /cardapio/:slug/...
+      const slugMatch = pathname.match(/\/cardapio\/([^/]+)/);
+      if (!slugMatch) { setIsAdmin(false); return; }
+      const slug = slugMatch[1];
+
+      const { data: empresa } = await supabase
+        .from('empresas')
+        .select('user_id')
+        .eq('slug', slug)
+        .single();
+
+      setIsAdmin(empresa?.user_id === userId);
+    }
+
+    checkAdmin();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(() => checkAdmin());
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [pathname]);
 
   if (pathname.startsWith('/admin')) return <Outlet />;
   if (STANDALONE_ROUTES.some((r) => pathname === r || pathname.startsWith(r + '/'))) return <Outlet />;
