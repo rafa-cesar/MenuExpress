@@ -45,23 +45,23 @@ export function CheckoutPage() {
   const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? cfg.taxaEntregaFixa : 0;
   const total = subtotal + taxa;
 
-  // Aguarda auth carregar antes de redirecionar
   useEffect(() => {
     if (authLoading) return;
-    // Não logado → vai para login
     if (!user) { navigate({ to: '/checkout/auth' }); return; }
-    // Logado mas sem perfil → vai completar perfil
     if (!perfil) { navigate({ to: '/checkout/auth' }); return; }
   }, [authLoading, user, perfil, navigate]);
 
-  // Loading enquanto auth resolve
-  if (authLoading || (!perfil && !pedidoFeito)) {
+  // Spinner enquanto auth resolve
+  if (authLoading) {
     return (
       <section className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
       </section>
     );
   }
+
+  // Early return — TypeScript agora sabe que perfil != null abaixo deste ponto
+  if (!perfil) return null;
 
   if (pedidoFeito) {
     const msg = [
@@ -125,10 +125,7 @@ export function CheckoutPage() {
   }
 
   async function confirmar() {
-    if (!empresa || !perfil) {
-      navigate({ to: '/checkout/auth' });
-      return;
-    }
+    if (!empresa || !perfil) { navigate({ to: '/checkout/auth' }); return; }
     setSalvando(true); setErro('');
     const pedido = await pedidosService.criar(empresa.id, {
       modalidade,
