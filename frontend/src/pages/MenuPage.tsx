@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { MenuCard } from '../components/MenuCard';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useStoreStatus } from '../hooks/useStoreStatus';
 import { useBrand } from '../hooks/useBrand';
-import { buildWhatsAppOrderUrl } from '../services';
-import { pedidosService } from '../services/pedidosService';
-import type { CartItem, MenuCategory, MenuItem } from '../types/menu';
-import type { ConfigEntrega, ModalidadeEntrega, Pedido } from '../types/domain';
 import { useMenuStore } from '../context/MenuStoreContext';
+import { useCart } from '../context/CartContext';
+import type { MenuCategory, MenuItem } from '../types/menu';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -17,163 +16,40 @@ const MOTIVO_LABEL: Record<string, string> = {
   dia_inativo: 'Não abrimos neste dia da semana.',
 };
 
-// ─── Avatar / Logomarca do estabelecimento ──────────────────────────────────
-function EmpresaAvatar({
-  logoUrl,
-  nome,
-  primary,
-}: {
-  logoUrl?: string | null;
-  nome: string;
-  primary: string;
-}) {
-  const initials = nome
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-
+function EmpresaAvatar({ logoUrl, nome, primary }: { logoUrl?: string | null; nome: string; primary: string }) {
+  const initials = nome.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
   if (logoUrl) {
     return (
       <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24">
-        <div
-          className="absolute inset-0 rounded-[1.25rem] shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
-          style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)' }}
-        />
-        <img
-          src={logoUrl}
-          alt={`Logo ${nome}`}
-          width={96}
-          height={96}
-          loading="lazy"
-          className="relative h-full w-full rounded-[1.25rem] border-2 border-white/30 bg-white object-cover shadow-lg"
-        />
+        <div className="absolute inset-0 rounded-[1.25rem] shadow-[0_8px_32px_rgba(0,0,0,0.35)]" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(6px)' }} />
+        <img src={logoUrl} alt={`Logo ${nome}`} width={96} height={96} loading="lazy"
+          className="relative h-full w-full rounded-[1.25rem] border-2 border-white/30 bg-white object-cover shadow-lg" />
       </div>
     );
   }
-
   return (
-    <div
-      className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.25rem] border-2 border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
-      style={{ backgroundColor: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)' }}
-      aria-label={`Logomarca de ${nome}`}
-    >
-      <span className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-        {initials}
-      </span>
+    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.25rem] border-2 border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24"
+      style={{ backgroundColor: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(6px)' }} aria-label={`Logomarca de ${nome}`}>
+      <span className="text-2xl font-black tracking-tight text-white sm:text-3xl">{initials}</span>
     </div>
   );
 }
 
-// ─── Tela de confirmação pós-pedido ─────────────────────────────────────
-function ConfirmacaoScreen({
-  pedido, empresa, whatsappMsg, whatsapp, brand, onNovoPedido,
-}: {
-  pedido: Pedido;
-  empresa: NonNullable<ReturnType<typeof useMenuStore>['empresa']>;
-  whatsappMsg: string;
-  whatsapp: string;
-  brand: ReturnType<typeof useBrand>;
-  onNovoPedido: () => void;
-}) {
-  const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
-
-  return (
-    <section className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl">✅</div>
-        <h1 className="mt-6 text-3xl font-black text-slate-950">Pedido recebido!</h1>
-        <p className="mt-2 text-slate-500">Seu pedido foi registrado com sucesso.</p>
-
-        <div className="mt-6 rounded-2xl border-2 border-dashed px-6 py-5" style={{ borderColor: brand.primary }}>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Número do pedido</p>
-          <p className="mt-1 text-5xl font-black" style={{ color: brand.primary }}>
-            #{String(pedido.numero).padStart(4, '0')}
-          </p>
-        </div>
-
-        <div className="mt-6 space-y-2 rounded-2xl bg-slate-50 px-5 py-4 text-left">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Modalidade</span>
-            <span className="font-bold text-slate-800">{pedido.modalidade === 'entrega' ? '🚚 Entrega' : '🏠 Retirada'}</span>
-          </div>
-          {pedido.clienteNome && (
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Nome</span>
-              <span className="font-bold text-slate-800">{pedido.clienteNome}</span>
-            </div>
-          )}
-          <div className="flex justify-between border-t border-slate-200 pt-2 text-sm">
-            <span className="font-black text-slate-900">Total</span>
-            <span className="font-black" style={{ color: brand.primary }}>{fmt.format(pedido.total)}</span>
-          </div>
-        </div>
-
-        <p className="mt-5 text-sm text-slate-400">
-          Acompanhe seu pedido com o número acima.
-          <br /><strong className="text-slate-600">{empresa.nome}</strong> já foi notificado.
-        </p>
-
-        {whatsapp && (
-          <a
-            href={buildWhatsAppOrderUrl(whatsapp, whatsappMsg)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-5 flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-6 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.528 5.855L0 24l6.335-1.508A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.371l-.36-.214-3.724.887.924-3.619-.235-.372A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
-            </svg>
-            Confirmar pelo WhatsApp (opcional)
-          </a>
-        )}
-
-        <button type="button" onClick={onNovoPedido} className="mt-3 w-full rounded-full py-3.5 font-black text-white transition" style={btnStyle}>
-          Fazer novo pedido
-        </button>
-      </div>
-
-      <p className="mt-8 text-xs text-slate-400">
-        Powered by <strong className="text-slate-500">YellowTech</strong>
-      </p>
-    </section>
-  );
-}
-
-// ─── Página principal ───────────────────────────────────────────────────────
 export function MenuPage() {
   usePageTitle('Cardápio');
   const { empresa, produtos, categorias, loading, erro } = useMenuStore();
   const storeStatus = useStoreStatus();
+  const { add, qty, items, subtotal, totalItems } = useCart();
+  const navigate = useNavigate();
 
   const menuCategories = categorias.map(c => c.nome) as MenuCategory[];
-
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | null>(null);
 
-  const [cartItems, setCartItems]             = useState<CartItem[]>([]);
-  const [orderNote, setOrderNote]             = useState('');
-  const [checkoutMessage, setCheckoutMessage] = useState('');
-  const [salvando, setSalvando]               = useState(false);
-  const [pedidoFeito, setPedidoFeito]         = useState<Pedido | null>(null);
-
-  const cfg: ConfigEntrega = empresa?.entrega ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
-  const defaultModalidade: ModalidadeEntrega = cfg.entregaAtiva && !cfg.retiradaAtiva ? 'entrega' : 'retirada';
-
-  const [modalidade, setModalidade]   = useState<ModalidadeEntrega>(defaultModalidade);
-  const [clienteNome, setClienteNome] = useState('');
-  const [clienteTel, setClienteTel]   = useState('');
-  const [clienteEnd, setClienteEnd]   = useState('');
-
-  const brand = useBrand(
-    empresa?.corPrincipal ?? '#f97316',
-    empresa?.estiloVisual ?? 'moderno',
-  );
+  const brand = useBrand(empresa?.corPrincipal ?? '#f97316', empresa?.estiloVisual ?? 'moderno');
+  const cfg = empresa?.entrega;
 
   useEffect(() => {
-    if (menuCategories.length > 0 && selectedCategory === null) {
-      setSelectedCategory(menuCategories[0]);
-    }
+    if (menuCategories.length > 0 && selectedCategory === null) setSelectedCategory(menuCategories[0]);
   }, [menuCategories, selectedCategory]);
 
   if (loading) {
@@ -194,11 +70,8 @@ export function MenuPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl">⚠️</div>
           <h1 className="mt-5 text-xl font-black text-slate-900">Cardápio indisponível</h1>
           <p className="mt-2 text-sm text-slate-500">{erro ?? 'Não foi possível carregar os dados da loja.'}</p>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="mt-6 rounded-full bg-slate-900 px-6 py-3 text-sm font-black text-white hover:bg-slate-700"
-          >
+          <button type="button" onClick={() => window.location.reload()}
+            className="mt-6 rounded-full bg-slate-900 px-6 py-3 text-sm font-black text-white hover:bg-slate-700">
             Tentar novamente
           </button>
         </div>
@@ -206,111 +79,13 @@ export function MenuPage() {
     );
   }
 
-  // empresa é Empresa (não null) a partir daqui — extraímos para que TypeScript
-  // mantenha o narrowing dentro das funções aninhadas abaixo.
   const empresaData = empresa;
-
-  const ambasAtivas = cfg.retiradaAtiva && cfg.entregaAtiva;
-
   const activeCategory = selectedCategory ?? menuCategories[0] ?? null;
-
-  const filteredItems  = produtos.filter((item) => item.categoria === activeCategory);
-  const subtotal       = cartItems.reduce((t, i) => t + i.product.preco * i.quantity, 0);
-  const taxa           = modalidade === 'entrega' && cfg.entregaAtiva ? cfg.taxaEntregaFixa : 0;
-  const total          = subtotal + taxa;
-  const totalItems     = cartItems.reduce((t, i) => t + i.quantity, 0);
-  const abaixoDoMinimo = modalidade === 'entrega' && cfg.pedidoMinimoEntrega > 0 && subtotal < cfg.pedidoMinimoEntrega;
-
-  function getQty(id: string) { return cartItems.find((i) => i.product.id === id)?.quantity ?? 0; }
-  function addProduct(product: MenuItem) {
-    if (!storeStatus.aberta) return;
-    setCartItems((cur) =>
-      cur.some((i) => i.product.id === product.id)
-        ? cur.map((i) => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
-        : [...cur, { product, quantity: 1 }]
-    );
-  }
-  function inc(id: string) { setCartItems((cur) => cur.map((i) => i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i)); }
-  function dec(id: string) { setCartItems((cur) => cur.map((i) => i.product.id === id ? { ...i, quantity: i.quantity - 1 } : i).filter((i) => i.quantity > 0)); }
-  function rem(id: string) { setCartItems((cur) => cur.filter((i) => i.product.id !== id)); }
-
-  function buildMsg() {
-    const itens = cartItems.map((i) => `• ${i.product.nome} x${i.quantity} — ${fmt.format(i.product.preco * i.quantity)}`).join('\n');
-    const endLoja = cfg.endereco
-      ? `${cfg.endereco.rua}, ${cfg.endereco.numero}${cfg.endereco.complemento ? ` (${cfg.endereco.complemento})` : ''} — ${cfg.endereco.bairro}, ${cfg.endereco.cidade}`
-      : 'Consultar endereço';
-    const linhasEntrega = modalidade === 'entrega'
-      ? [`📍 Endereço de entrega: ${clienteEnd || '(não informado)'}`, `🚚 Taxa de entrega: ${fmt.format(taxa)}`]
-      : [`🏠 Modalidade: Retirada no local`, `📌 Endereço da loja: ${endLoja}`];
-    return [
-      `Olá! Gostaria de fazer um pedido. 🛒`,
-      ``,
-      `👤 Nome: ${clienteNome || '(não informado)'}`,
-      `📱 Telefone: ${clienteTel || '(não informado)'}`,
-      ``,
-      ...linhasEntrega,
-      ``,
-      `📋 Itens do pedido:`,
-      itens,
-      ``,
-      orderNote.trim() ? `📝 Observação: ${orderNote.trim()}` : null,
-      ``,
-      `💰 Subtotal: ${fmt.format(subtotal)}`,
-      taxa > 0 ? `🚚 Taxa de entrega: ${fmt.format(taxa)}` : null,
-      `✅ Total: ${fmt.format(total)}`,
-    ].filter(Boolean).join('\n');
-  }
-
-  async function handleCheckout() {
-    if (!storeStatus.aberta)   { setCheckoutMessage(MOTIVO_LABEL[storeStatus.motivo] ?? 'A loja está fechada.'); return; }
-    if (cartItems.length === 0) { setCheckoutMessage('Adicione pelo menos um produto ao carrinho.'); return; }
-    if (abaixoDoMinimo)        { setCheckoutMessage(`Pedido mínimo para entrega é ${fmt.format(cfg.pedidoMinimoEntrega)}.`); return; }
-    setCheckoutMessage('');
-    setSalvando(true);
-
-    const pedido = await pedidosService.criar(empresaData.id, {
-      modalidade, clienteNome, clienteTel, clienteEnd,
-      itens: cartItems.map((i) => ({
-        nome: i.product.nome,
-        quantidade: i.quantity,
-        precoUnitario: i.product.preco,
-        subtotal: i.product.preco * i.quantity,
-      })),
-      observacao: orderNote,
-      subtotal, taxaEntrega: taxa, total,
-    });
-
-    setSalvando(false);
-
-    if (!pedido) { setCheckoutMessage('Erro ao registrar pedido. Tente novamente.'); return; }
-    setPedidoFeito(pedido);
-  }
-
-  function handleNovoPedido() {
-    setPedidoFeito(null);
-    setCartItems([]);
-    setOrderNote('');
-    setClienteNome('');
-    setClienteTel('');
-    setClienteEnd('');
-    setCheckoutMessage('');
-    setSelectedCategory(menuCategories[0] ?? null);
-  }
-
+  const filteredItems = produtos.filter(item => item.categoria === activeCategory);
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
 
-  if (pedidoFeito) {
-    return (
-      <ConfirmacaoScreen
-        pedido={pedidoFeito} empresa={empresaData}
-        whatsappMsg={buildMsg()} whatsapp={empresaData.whatsapp}
-        brand={brand} onNovoPedido={handleNovoPedido}
-      />
-    );
-  }
-
   return (
-    <section className="bg-slate-50 pb-72 lg:pb-12">
+    <section className="bg-slate-50 pb-24 lg:pb-12">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         {!storeStatus.aberta && (
           <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
@@ -324,46 +99,44 @@ export function MenuPage() {
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
             <div>
               <div className="mb-5 flex items-end gap-4">
-                <EmpresaAvatar
-                  logoUrl={empresaData.logoUrl}
-                  nome={empresaData.nome}
-                  primary={brand.primary}
-                />
+                <EmpresaAvatar logoUrl={empresaData.logoUrl} nome={empresaData.nome} primary={brand.primary} />
                 <div className="flex flex-wrap items-center gap-2 pb-1">
                   <span className="rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: `${brand.primary}33`, color: '#fff' }}>Cardápio digital</span>
                   <span className={`rounded-full px-3 py-1 text-xs font-black ${
                     storeStatus.aberta ? 'bg-emerald-500/20 text-emerald-100' : 'bg-red-500/20 text-red-100'
-                  }`}>
-                    {storeStatus.aberta ? '🟢 Aberta' : '🔴 Fechada'}
-                  </span>
+                  }`}>{storeStatus.aberta ? '🟢 Aberta' : '🔴 Fechada'}</span>
                 </div>
               </div>
-
               <h1 className={`text-4xl sm:text-5xl ${brand.titleClass}`}>{empresaData.nome}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-white/85">{empresaData.descricao}</p>
               <p className="mt-4 text-sm font-semibold text-white/75">📍 {empresaData.cidade}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {cfg.retiradaAtiva && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🏠 Retirada disponível</span>}
-                {cfg.entregaAtiva  && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(cfg.taxaEntregaFixa)}</span>}
+                {cfg?.retiradaAtiva && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🏠 Retirada disponível</span>}
+                {cfg?.entregaAtiva  && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(cfg.taxaEntregaFixa)}</span>}
               </div>
             </div>
+
+            {/* Mini carrinho no hero */}
             <div className="rounded-[1.5rem] p-5" style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)' }}>
               <p className="text-sm font-semibold text-white/80">Seu pedido</p>
-              <p className="mt-3 text-3xl font-black">{fmt.format(total)}</p>
-              <p className="mt-1 text-xs text-white/60">{totalItems} item(ns) · {taxa > 0 ? `+ ${fmt.format(taxa)} entrega` : 'sem taxa'}</p>
-              <button type="button" onClick={handleCheckout} disabled={!storeStatus.aberta || salvando}
-                className="mt-5 w-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"
+              <p className="mt-3 text-3xl font-black">{fmt.format(subtotal)}</p>
+              <p className="mt-1 text-xs text-white/60">{totalItems} item(ns) · sem taxa</p>
+              <button type="button"
+                onClick={() => storeStatus.aberta && items.length > 0 && navigate({ to: '/checkout/carrinho' })}
+                disabled={!storeStatus.aberta || items.length === 0}
+                className="mt-5 w-full px-5 py-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40"
                 style={btnStyle}>
-                {salvando ? 'Registrando pedido...' : storeStatus.aberta ? 'Fazer Pedido' : 'Loja Fechada'}
+                {!storeStatus.aberta ? 'Loja Fechada' : items.length === 0 ? 'Adicione produtos' : `Ver carrinho (${totalItems})`}
               </button>
             </div>
           </div>
         </div>
 
+        {/* Categorias */}
         {menuCategories.length > 0 && (
           <div className="sticky top-0 z-20 -mx-4 mt-6 border-y border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-full sm:border">
             <div className="flex gap-2 overflow-x-auto pb-1 sm:justify-center sm:pb-0">
-              {menuCategories.map((category) => {
+              {menuCategories.map(category => {
                 const isActive = activeCategory === category;
                 return (
                   <button key={category} type="button" onClick={() => setSelectedCategory(category)}
@@ -377,187 +150,47 @@ export function MenuPage() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div>
-            <div className="mb-4 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-wide" style={{ color: brand.primary }}>Categoria</p>
-                <h2 className="text-2xl font-black text-slate-950">{activeCategory ?? ''}</h2>
-              </div>
-              <span className="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm">{filteredItems.length} produto(s)</span>
+        {/* Produtos */}
+        <div className="mt-6">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wide" style={{ color: brand.primary }}>Categoria</p>
+              <h2 className="text-2xl font-black text-slate-950">{activeCategory ?? ''}</h2>
             </div>
-            {filteredItems.length === 0 && !loading && (
-              <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
-                <p className="text-sm text-slate-500">Nenhum produto disponível nesta categoria.</p>
-              </div>
-            )}
-            <div className="grid gap-5 md:grid-cols-2">
-              {filteredItems.map((item) => (
-                <MenuCard key={item.id} item={item} quantity={getQty(item.id)}
-                  onAdd={storeStatus.aberta ? addProduct : () => {}}
-                  onIncrement={inc} onDecrement={dec} disabled={!storeStatus.aberta}
-                />
-              ))}
-            </div>
+            <span className="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm">{filteredItems.length} produto(s)</span>
           </div>
-          <aside className="hidden h-fit lg:sticky lg:top-24 lg:block">
-            <CartPanel
-              cartItems={cartItems} subtotal={subtotal} taxa={taxa} total={total}
-              orderNote={orderNote} checkoutMessage={checkoutMessage}
-              storeAberta={storeStatus.aberta} brand={brand} modalidade={modalidade}
-              ambasAtivas={ambasAtivas} cfg={cfg} abaixoDoMinimo={abaixoDoMinimo}
-              salvando={salvando} clienteNome={clienteNome} clienteTel={clienteTel} clienteEnd={clienteEnd}
-              onModalidade={setModalidade} onNome={setClienteNome} onTel={setClienteTel} onEnd={setClienteEnd}
-              onOrderNoteChange={setOrderNote} onCheckout={handleCheckout}
-              onIncrement={inc} onDecrement={dec} onRemove={rem}
-            />
-          </aside>
+          {filteredItems.length === 0 && !loading && (
+            <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
+              <p className="text-sm text-slate-500">Nenhum produto disponível nesta categoria.</p>
+            </div>
+          )}
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {filteredItems.map(item => (
+              <MenuCard key={item.id} item={item} quantity={qty(item.id)}
+                onAdd={storeStatus.aberta ? (p: MenuItem) => add(p) : () => {}}
+                onIncrement={id => { const i = items.find(x => x.product.id === id); if (i) add(i.product); }}
+                onDecrement={id => { const cart = useCart; void cart; }}
+                disabled={!storeStatus.aberta}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Mobile cart */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-4 shadow-[0_-12px_40px_rgba(15,23,42,0.16)] lg:hidden">
-        <CartPanel compact
-          cartItems={cartItems} subtotal={subtotal} taxa={taxa} total={total}
-          orderNote={orderNote} checkoutMessage={checkoutMessage}
-          storeAberta={storeStatus.aberta} brand={brand} modalidade={modalidade}
-          ambasAtivas={ambasAtivas} cfg={cfg} abaixoDoMinimo={abaixoDoMinimo}
-          salvando={salvando} clienteNome={clienteNome} clienteTel={clienteTel} clienteEnd={clienteEnd}
-          onModalidade={setModalidade} onNome={setClienteNome} onTel={setClienteTel} onEnd={setClienteEnd}
-          onOrderNoteChange={setOrderNote} onCheckout={handleCheckout}
-          onIncrement={inc} onDecrement={dec} onRemove={rem}
-        />
-      </div>
+      {/* FAB mobile — Ver carrinho */}
+      {items.length > 0 && storeStatus.aberta && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white p-4 shadow-[0_-12px_40px_rgba(15,23,42,0.16)] lg:hidden">
+          <button onClick={() => navigate({ to: '/checkout/carrinho' })}
+            className="w-full rounded-full py-4 text-sm font-black text-white transition"
+            style={btnStyle}>
+            🛒 Ver carrinho · {totalItems} item(ns) · {fmt.format(subtotal)}
+          </button>
+        </div>
+      )}
 
       <div className="px-4 pb-6 pt-10 text-center">
-        <p className="text-xs text-slate-400">
-          Cardápio digital por <strong className="text-slate-500">YellowTech</strong>
-        </p>
+        <p className="text-xs text-slate-400">Cardápio digital por <strong className="text-slate-500">YellowTech</strong></p>
       </div>
     </section>
-  );
-}
-
-// ─── CartPanel ───────────────────────────────────────────────────────────────────
-type CartPanelProps = {
-  cartItems: CartItem[]; subtotal: number; taxa: number; total: number;
-  orderNote: string; checkoutMessage: string; storeAberta: boolean;
-  brand: ReturnType<typeof useBrand>; compact?: boolean; salvando: boolean;
-  modalidade: ModalidadeEntrega; ambasAtivas: boolean;
-  cfg: ConfigEntrega;
-  abaixoDoMinimo: boolean;
-  clienteNome: string; clienteTel: string; clienteEnd: string;
-  onModalidade: (v: ModalidadeEntrega) => void;
-  onNome: (v: string) => void; onTel: (v: string) => void; onEnd: (v: string) => void;
-  onOrderNoteChange: (v: string) => void; onCheckout: () => void;
-  onIncrement: (id: string) => void; onDecrement: (id: string) => void; onRemove: (id: string) => void;
-};
-
-function CartPanel({ cartItems, subtotal, taxa, total, orderNote, checkoutMessage, storeAberta, brand, compact = false, salvando, modalidade, ambasAtivas, cfg, abaixoDoMinimo, clienteNome, clienteTel, clienteEnd, onModalidade, onNome, onTel, onEnd, onOrderNoteChange, onCheckout, onIncrement, onDecrement, onRemove }: CartPanelProps) {
-  const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
-  const inputClass = 'mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400';
-  return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl">
-      <div className="flex items-center justify-between gap-4">
-        <div><h2 className="text-lg font-black text-slate-950">Carrinho</h2><p className="text-sm text-slate-500">{cartItems.length} item(ns)</p></div>
-        <p className="text-xl font-black" style={{ color: brand.primary }}>{fmt.format(total)}</p>
-      </div>
-      {ambasAtivas && (
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {(['retirada', 'entrega'] as ModalidadeEntrega[]).map((m) => (
-            <button key={m} type="button" onClick={() => onModalidade(m)}
-              className={`rounded-2xl border-2 py-3 text-sm font-black transition ${
-                modalidade === m ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-              }`}>
-              {m === 'retirada' ? '🏠 Retirada' : '🚚 Entrega'}
-            </button>
-          ))}
-        </div>
-      )}
-      {!ambasAtivas && (
-        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">
-          {modalidade === 'retirada' ? '🏠 Retirada no local' : '🚚 Entrega em domicílio'}
-        </div>
-      )}
-      {abaixoDoMinimo && (
-        <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold text-amber-700">
-          ⚠️ Mínimo para entrega: {fmt.format(cfg.pedidoMinimoEntrega)}. Faltam {fmt.format(cfg.pedidoMinimoEntrega - subtotal)}.
-        </p>
-      )}
-      {!compact && (
-        <>
-          <div className="mt-4 space-y-3">
-            {cartItems.length === 0
-              ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">{storeAberta ? 'Seu carrinho está vazio.' : '🔴 Loja fechada.'}</p>
-              : cartItems.map((item) => (
-                <div key={item.product.id} className="rounded-2xl border border-slate-100 p-4">
-                  <div className="flex justify-between gap-3">
-                    <div>
-                      <p className="font-black text-slate-950">{item.product.nome}</p>
-                      <p className="text-sm text-slate-500">{fmt.format(item.product.preco)}</p>
-                    </div>
-                    <button type="button" onClick={() => onRemove(item.product.id)} className="text-xs font-bold text-red-500 hover:text-red-600">Remover</button>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-2 py-1">
-                      <button type="button" onClick={() => onDecrement(item.product.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-black shadow-sm">−</button>
-                      <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
-                      <button type="button" onClick={() => onIncrement(item.product.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-sm font-black shadow-sm">+</button>
-                    </div>
-                    <p className="text-sm font-black text-slate-950">{fmt.format(item.product.preco * item.quantity)}</p>
-                  </div>
-                </div>
-              ))
-            }
-          </div>
-
-          <div className="mt-5 space-y-3">
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Seu nome</label>
-              <input type="text" placeholder="Nome completo" value={clienteNome} onChange={(e) => onNome(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Telefone</label>
-              <input type="tel" placeholder="(11) 99999-9999" value={clienteTel} onChange={(e) => onTel(e.target.value)} className={inputClass} />
-            </div>
-            {modalidade === 'entrega' && (
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Endereço de entrega</label>
-                <input type="text" placeholder="Rua, número, bairro" value={clienteEnd} onChange={(e) => onEnd(e.target.value)} className={inputClass} />
-              </div>
-            )}
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Observações</label>
-              <textarea rows={2} placeholder="Alguma observação?" value={orderNote} onChange={(e) => onOrderNoteChange(e.target.value)}
-                className={`${inputClass} resize-none`} />
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
-            <div className="flex justify-between text-sm text-slate-500">
-              <span>Subtotal</span><span>{fmt.format(subtotal)}</span>
-            </div>
-            {taxa > 0 && (
-              <div className="flex justify-between text-sm text-slate-500">
-                <span>Taxa de entrega</span><span>{fmt.format(taxa)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-black text-slate-950">
-              <span>Total</span><span style={{ color: brand.primary }}>{fmt.format(total)}</span>
-            </div>
-          </div>
-        </>
-      )}
-
-      {checkoutMessage && (
-        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{checkoutMessage}</p>
-      )}
-
-      <button type="button" onClick={onCheckout} disabled={!storeAberta || salvando}
-        className="mt-4 w-full rounded-full py-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 transition"
-        style={btnStyle}>
-        {salvando ? 'Registrando pedido...' : storeAberta ? (compact ? `Pedir • ${fmt.format(total)}` : 'Confirmar Pedido') : 'Loja Fechada'}
-      </button>
-    </div>
   );
 }

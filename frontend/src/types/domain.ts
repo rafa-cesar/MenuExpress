@@ -10,6 +10,7 @@ export type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 export type EstiloVisual = 'moderno' | 'clean' | 'vibrante' | 'classico';
 export type ModalidadeEntrega = 'retirada' | 'entrega';
+export type FormaPagamento = 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito';
 
 export interface HorarioDia {
   ativo: boolean;
@@ -33,13 +34,22 @@ export interface EnderecoLoja {
   complemento?: string;
 }
 
+export interface EnderecoCliente {
+  rua: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  complemento?: string;
+  cep?: string;
+}
+
 export interface ConfigEntrega {
   retiradaAtiva: boolean;
   entregaAtiva: boolean;
   taxaEntregaFixa: number;
   pedidoMinimoEntrega: number;
   endereco?: EnderecoLoja;
-  tempoPadraoMinutos?: number; // estimativa padrao de preparo
+  tempoPadraoMinutos?: number;
 }
 
 export interface Empresa {
@@ -48,7 +58,6 @@ export interface Empresa {
   slug: string;
   descricao: string;
   whatsapp: string;
-  /** Handle do Instagram sem o @ (ex: "minha_loja"). Opcional. */
   instagram?: string;
   cidade: string;
   status: EmpresaStatus;
@@ -93,9 +102,11 @@ export interface PedidoItem {
 export interface Pedido {
   id: string;
   empresaId: string;
+  clienteId?: string;
   numero: number;
   status: PedidoStatus;
   modalidade: ModalidadeEntrega;
+  formaPagamento?: FormaPagamento;
   clienteNome?: string;
   clienteTel?: string;
   clienteEnd?: string;
@@ -110,8 +121,14 @@ export interface Pedido {
   atualizadoEm: string;
 }
 
-export interface Cliente {
+export interface ClientePerfil {
+  id: string;
+  authId: string;
+  empresaId: string;
   nome: string;
-  telefone?: string;
-  endereco?: string;
+  email?: string;
+  whatsapp?: string;
+  dataNasc?: string;
+  endereco?: EnderecoCliente;
+  fotoUrl?: string;
 }

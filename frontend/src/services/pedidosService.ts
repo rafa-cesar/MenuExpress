@@ -1,15 +1,15 @@
 import { supabase } from '../lib/supabase';
-import type { Pedido, PedidoItem, PedidoStatus, ModalidadeEntrega } from '../types/domain';
-
-// Nenhum EMPRESA_ID fixo — empresaId é sempre passado pelo chamador
+import type { Pedido, PedidoItem, PedidoStatus, ModalidadeEntrega, FormaPagamento } from '../types/domain';
 
 function mapPedido(row: Record<string, unknown>): Pedido {
   return {
     id: row.id as string,
     empresaId: row.empresa_id as string,
+    clienteId: row.cliente_id as string | undefined,
     numero: row.numero as number,
     status: row.status as PedidoStatus,
     modalidade: row.modalidade as ModalidadeEntrega,
+    formaPagamento: row.forma_pagamento as FormaPagamento | undefined,
     clienteNome: row.cliente_nome as string | undefined,
     clienteTel: row.cliente_tel as string | undefined,
     clienteEnd: row.cliente_end as string | undefined,
@@ -28,9 +28,11 @@ function mapPedido(row: Record<string, unknown>): Pedido {
 export const pedidosService = {
   async criar(empresaId: string, pedido: {
     modalidade: ModalidadeEntrega;
+    formaPagamento: FormaPagamento;
     clienteNome: string;
     clienteTel: string;
     clienteEnd: string;
+    clienteId?: string;
     itens: PedidoItem[];
     observacao: string;
     subtotal: number;
@@ -43,6 +45,8 @@ export const pedidosService = {
         empresa_id: empresaId,
         status: 'aguardando',
         modalidade: pedido.modalidade,
+        forma_pagamento: pedido.formaPagamento,
+        cliente_id: pedido.clienteId ?? null,
         cliente_nome: pedido.clienteNome || null,
         cliente_tel: pedido.clienteTel || null,
         cliente_end: pedido.clienteEnd || null,
@@ -52,9 +56,6 @@ export const pedidosService = {
         taxa_entrega: pedido.taxaEntrega,
         total: pedido.total,
       })
-      // .select().single() confirma que a linha foi persistida antes de retornar sucesso.
-      // Sem isso, um erro de RLS ou constraint silencioso retornaria null e o
-      // cardápio exibiria "Erro ao registrar pedido" sem motivo claro.
       .select()
       .single();
 
@@ -105,8 +106,6 @@ export const pedidosService = {
   },
 
   async atualizarStatus(id: string, status: PedidoStatus): Promise<boolean> {
-    // Confirma com .select() que a linha foi atualizada e visível após o update.
-    // Caso a policy de RLS bloqueie o update, o .select() retornará erro, expondo o problema.
     const { error } = await supabase
       .from('pedidos')
       .update({ status })

@@ -3,6 +3,10 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AssinarPage } from './pages/AssinarPage';
 import { CadastroPage } from './pages/CadastroPage';
+import { CartPage } from './pages/CartPage';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { ClienteAuthPage } from './pages/ClienteAuthPage';
+import { MinhaAreaPage } from './pages/MinhaAreaPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { AdminCategoriesPage } from './pages/admin/AdminCategoriesPage';
@@ -15,12 +19,16 @@ import { MenuPage } from './pages/MenuPage';
 
 const rootRoute    = createRootRoute({ component: PublicLayout });
 
-const homeRoute    = createRoute({ getParentRoute: () => rootRoute, path: '/',         component: HomePage });
-const menuRoute    = createRoute({ getParentRoute: () => rootRoute, path: '/cardapio', component: MenuPage });
-const loginRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/login',    component: LoginPage });
-const assinarRoute = createRoute({ getParentRoute: () => rootRoute, path: '/assinar',  component: AssinarPage });
-const cadastroRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cadastro', component: CadastroPage });
-const adminLoginRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/login', component: AdminLoginPage });
+const homeRoute        = createRoute({ getParentRoute: () => rootRoute, path: '/',                 component: HomePage });
+const menuRoute        = createRoute({ getParentRoute: () => rootRoute, path: '/cardapio',         component: MenuPage });
+const loginRoute       = createRoute({ getParentRoute: () => rootRoute, path: '/login',            component: LoginPage });
+const assinarRoute     = createRoute({ getParentRoute: () => rootRoute, path: '/assinar',          component: AssinarPage });
+const cadastroRoute    = createRoute({ getParentRoute: () => rootRoute, path: '/cadastro',         component: CadastroPage });
+const cartRoute        = createRoute({ getParentRoute: () => rootRoute, path: '/checkout/carrinho', component: CartPage });
+const checkoutRoute    = createRoute({ getParentRoute: () => rootRoute, path: '/checkout/resumo',  component: CheckoutPage });
+const clienteAuthRoute = createRoute({ getParentRoute: () => rootRoute, path: '/checkout/auth',   component: ClienteAuthPage });
+const minhaAreaRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/minha-area',      component: MinhaAreaPage });
+const adminLoginRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/admin/login',      component: AdminLoginPage });
 
 const adminRoute            = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: AdminLayout });
 const adminDashboardRoute   = createRoute({ getParentRoute: () => adminRoute, path: '/',              component: AdminDashboardPage });
@@ -35,6 +43,10 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   assinarRoute,
   cadastroRoute,
+  cartRoute,
+  checkoutRoute,
+  clienteAuthRoute,
+  minhaAreaRoute,
   adminLoginRoute,
   adminRoute.addChildren([
     adminDashboardRoute,
