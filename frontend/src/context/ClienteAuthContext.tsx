@@ -9,7 +9,10 @@ interface ClienteAuthContextValue {
   session: Session | null;
   perfil: ClientePerfil | null;
   loading: boolean;
+  authError: string | null;
   loginComGoogle: () => Promise<void>;
+  loginComEmail: (email: string, senha: string) => Promise<void>;
+  cadastrarComEmail: (email: string, senha: string) => Promise<void>;
   logout: () => Promise<void>;
   salvarPerfil: (dados: Partial<ClientePerfil> & { empresaId: string }) => Promise<void>;
   perfilCompleto: boolean;
@@ -22,6 +25,7 @@ export function ClienteAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [perfil, setPerfil] = useState<ClientePerfil | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -45,10 +49,33 @@ export function ClienteAuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const loginComGoogle = async () => {
+    setAuthError(null);
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/checkout/auth` },
     });
+  };
+
+  const loginComEmail = async (email: string, senha: string) => {
+    setAuthError(null);
+    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    if (error) {
+      setAuthError('E-mail ou senha inválidos.');
+      throw error;
+    }
+  };
+
+  const cadastrarComEmail = async (email: string, senha: string) => {
+    setAuthError(null);
+    const { error } = await supabase.auth.signUp({ email, password: senha });
+    if (error) {
+      setAuthError(
+        error.message.toLowerCase().includes('already')
+          ? 'Este e-mail já possui cadastro. Faça login.'
+          : 'Não foi possível criar a conta. Verifique os dados.'
+      );
+      throw error;
+    }
   };
 
   const logout = async () => {
@@ -84,10 +111,10 @@ export function ClienteAuthProvider({ children }: { children: ReactNode }) {
   const perfilCompleto = Boolean(perfil?.nome && perfil?.whatsapp);
 
   const value = useMemo<ClienteAuthContextValue>(() => ({
-    user, session, perfil, loading,
-    loginComGoogle, logout, salvarPerfil, perfilCompleto,
+    user, session, perfil, loading, authError,
+    loginComGoogle, loginComEmail, cadastrarComEmail, logout, salvarPerfil, perfilCompleto,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, session, perfil, loading, perfilCompleto]);
+  }), [user, session, perfil, loading, authError, perfilCompleto]);
 
   return <ClienteAuthContext.Provider value={value}>{children}</ClienteAuthContext.Provider>;
 }
