@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useCart } from '../context/CartContext';
 import { useClienteAuth } from '../context/ClienteAuthContext';
@@ -7,6 +7,7 @@ import { useBrand } from '../hooks/useBrand';
 import { pedidosService } from '../services/pedidosService';
 import { buildWhatsAppOrderUrl } from '../services';
 import type { FormaPagamento, Pedido } from '../types/domain';
+import { getDeliveryFee, getDeliveryMinimum } from '../services/delivery';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -40,9 +41,11 @@ export function CheckoutPage() {
   const [clienteEnd, setClienteEnd] = useState(
     perfil?.endereco ? `${perfil.endereco.rua}, ${perfil.endereco.numero} — ${perfil.endereco.bairro}` : ''
   );
+  const enderecoInputRef = useRef<HTMLInputElement>(null);
 
   const cfg = empresa?.entrega;
-  const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? cfg.taxaEntregaFixa : 0;
+  const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? getDeliveryFee(empresa) : 0;
+  const minimoEntrega = getDeliveryMinimum(empresa);
   const total = subtotal + taxa;
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export function CheckoutPage() {
       ``,
       `👤 ${pedidoFeito.clienteNome}`,
       `📱 ${pedidoFeito.clienteTel || '—'}`,
-      modalidade === 'entrega' ? `📍 Entrega: ${clienteEnd}` : `🏠 Retirada no local`,
+      modalidade === 'entrega' ? `📍 Entrega: ${pedidoFeito.clienteEnd ?? clienteEnd}` : `🏠 Retirada no local`,
       ``,
       ...items.map(i => `• ${i.product.nome} x${i.quantity} — ${fmt.format(i.product.preco * i.quantity)}`),
       ``,
@@ -126,13 +129,25 @@ export function CheckoutPage() {
 
   async function confirmar() {
     if (!empresa || !perfil) { navigate({ to: '/checkout/auth' }); return; }
+    const enderecoEntrega = modalidade === 'entrega'
+      ? (enderecoInputRef.current?.value ?? clienteEnd).trim()
+      : '';
+    if (modalidade === 'entrega' && !enderecoEntrega) {
+      setErro('Informe o endereço completo para entrega.');
+      enderecoInputRef.current?.focus();
+      return;
+    }
+    if (modalidade === 'entrega' && subtotal < minimoEntrega) {
+      setErro(`O pedido mínimo para entrega é ${fmt.format(minimoEntrega)}.`);
+      return;
+    }
     setSalvando(true); setErro('');
     const pedido = await pedidosService.criar(empresa.id, {
       modalidade,
       formaPagamento,
       clienteNome: perfil.nome,
       clienteTel: perfil.whatsapp ?? '',
-      clienteEnd: modalidade === 'entrega' ? clienteEnd : '',
+      clienteEnd: enderecoEntrega,
       clienteId: perfil.id,
       itens: items.map(i => ({ produtoId: i.product.id, quantidade: i.quantity })),
       observacao,
@@ -168,9 +183,12 @@ export function CheckoutPage() {
         {modalidade === 'entrega' && (
           <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
             <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Endereço de entrega</label>
-            <input type="text" value={clienteEnd} onChange={e => setClienteEnd(e.target.value)}
+            <input ref={enderecoInputRef} type="text" required value={clienteEnd} onChange={e => setClienteEnd(e.target.value)}
               placeholder="Rua, número, bairro"
               className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" />
+            {perfil.endereco && (
+              <p className="mt-2 text-xs text-slate-500">Endereço preenchido com os dados salvos. Edite se a entrega for para outro local.</p>
+            )}
           </div>
         )}
 
