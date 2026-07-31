@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useClienteAuth } from '../context/ClienteAuthContext';
 import { useMenuStore } from '../context/MenuStoreContext';
+import { useCart } from '../context/CartContext';
 import { useBrand } from '../hooks/useBrand';
 import type { EnderecoCliente } from '../types/domain';
 
@@ -10,6 +11,7 @@ type ModoAuth = 'opcoes' | 'login' | 'cadastro';
 export function ClienteAuthPage() {
   const { user, perfil, loading, authError, loginComGoogle, loginComEmail, cadastrarComEmail, salvarPerfil, perfilCompleto } = useClienteAuth();
   const { empresa } = useMenuStore();
+  const { items } = useCart();
   const navigate = useNavigate();
   const brand = useBrand(empresa?.corPrincipal ?? '#f97316', empresa?.estiloVisual ?? 'moderno');
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
@@ -46,12 +48,12 @@ export function ClienteAuthPage() {
     }
   }, [user, perfil, empresa]);
 
-  // Se já logado e perfil completo, redireciona direto pro checkout
+  // Se já logado e perfil completo, continua o pedido ou abre a área do cliente.
   useEffect(() => {
     if (!loading && user && perfilCompleto) {
-      navigate({ to: '/checkout/resumo' });
+      navigate({ to: items.length > 0 ? '/checkout/resumo' : '/minha-area' });
     }
-  }, [loading, user, perfilCompleto, navigate]);
+  }, [loading, user, perfilCompleto, items.length, navigate]);
 
   if (loading) {
     return (
