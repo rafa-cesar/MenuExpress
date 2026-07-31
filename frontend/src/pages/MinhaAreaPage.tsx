@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useClienteAuth } from '../context/ClienteAuthContext';
 import { useMenuStore } from '../context/MenuStoreContext';
@@ -65,6 +65,10 @@ export function MinhaAreaPage() {
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
+  const pedidosAtivos = useMemo(
+    () => pedidos.filter((pedido) => !['finalizado', 'cancelado'].includes(pedido.status)),
+    [pedidos],
+  );
 
   useEffect(() => {
     if (!user || !perfil) { setLoading(false); return; }
@@ -97,8 +101,7 @@ export function MinhaAreaPage() {
 
   // Assina tempo real para pedidos ativos
   useEffect(() => {
-    const ativos = pedidos.filter(p => !['finalizado', 'cancelado'].includes(p.status));
-    const subs = ativos.map(p =>
+    const subs = pedidosAtivos.map(p =>
       clienteService.subscribePedido(p.id, (row) => {
         setPedidos(cur => cur.map(existing =>
           existing.id === row.id ? { ...existing, status: row.status as PedidoStatus, estimativaMinutos: row.estimativa_minutos as number | undefined } : existing
@@ -106,7 +109,7 @@ export function MinhaAreaPage() {
       })
     );
     return () => { subs.forEach(s => s.unsubscribe()); };
-  }, [pedidos.length]);
+  }, [pedidosAtivos]);
 
   if (!user) {
     return (

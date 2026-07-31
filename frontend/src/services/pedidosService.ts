@@ -33,31 +33,20 @@ export const pedidosService = {
     clienteTel: string;
     clienteEnd: string;
     clienteId?: string;
-    itens: PedidoItem[];
+    itens: Array<{ produtoId: string; quantidade: number }>;
     observacao: string;
-    subtotal: number;
-    taxaEntrega: number;
-    total: number;
   }): Promise<Pedido | null> {
-    const { data, error } = await supabase
-      .from('pedidos')
-      .insert({
-        empresa_id: empresaId,
-        status: 'aguardando',
-        modalidade: pedido.modalidade,
-        forma_pagamento: pedido.formaPagamento,
-        cliente_id: pedido.clienteId ?? null,
-        cliente_nome: pedido.clienteNome || null,
-        cliente_tel: pedido.clienteTel || null,
-        cliente_end: pedido.clienteEnd || null,
-        itens: pedido.itens,
-        observacao: pedido.observacao || null,
-        subtotal: pedido.subtotal,
-        taxa_entrega: pedido.taxaEntrega,
-        total: pedido.total,
-      })
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('criar_pedido_seguro', {
+      p_empresa_id: empresaId,
+      p_modalidade: pedido.modalidade,
+      p_forma_pagamento: pedido.formaPagamento,
+      p_cliente_nome: pedido.clienteNome,
+      p_cliente_tel: pedido.clienteTel,
+      p_cliente_end: pedido.clienteEnd,
+      p_cliente_id: pedido.clienteId ?? null,
+      p_itens: pedido.itens,
+      p_observacao: pedido.observacao || null,
+    });
 
     if (error) {
       console.error('[pedidosService.criar] Erro ao inserir pedido:', error.message, error.details);

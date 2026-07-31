@@ -114,7 +114,6 @@ export function AdminSettingsPage() {
       initializedRef.current = true;
       setForm(buildForm(empresa));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, empresa]);
 
   const brandPreview = useBrand(form.corPrincipal, form.estiloVisual);

@@ -1,69 +1,65 @@
 # MenuExpress
 
-MenuExpress é uma plataforma SaaS multiempresa para cardápios digitais, preparada para receber pedidos via WhatsApp e evoluir para recursos como autenticação, painel administrativo e persistência com Supabase.
+MenuExpress é uma plataforma SaaS multiempresa para cardápios digitais, pedidos online e atendimento via WhatsApp. A aplicação possui autenticação, painel administrativo e persistência com Supabase.
 
-## Objetivo desta base
+## Stack
 
-Esta etapa cria uma fundação limpa, responsiva e escalável para o frontend, sem implementar autenticação, banco de dados ou integração com Supabase.
-
-## Stack planejada
-
-- React
-- TypeScript
-- Vite
-- TanStack Router
+- React 19 e TypeScript
+- Vite e TanStack Router
 - Tailwind CSS
-- Supabase futuramente
-- Layout responsivo para desktop e celular
+- Supabase Auth, Database, Realtime e Storage
+- Vercel
 
-## Estrutura do projeto
+## Estrutura
 
-```txt
+```text
 MenuExpress/
-├── frontend/          # Aplicação web React
-├── backend/           # Espaço reservado para APIs e serviços futuros
-└── docs/              # Documentação técnica e decisões arquiteturais
+├── frontend/          # Aplicação React
+├── backend/           # Espaço reservado para serviços futuros
+├── docs/              # Documentação técnica
+└── supabase/          # Migrações do banco, RLS e Storage
 ```
 
-## Frontend
+## Executando localmente
 
-A aplicação inicial contém:
-
-- Layout público base
-- Home pública em `/`
-- Rota pública de cardápio em `/cardapio`
-- Componentes reutilizáveis
-- Dados mockados para demonstrar a experiência inicial
-
-### Executando localmente
+Use Node.js 22 ou superior e pnpm:
 
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install --frozen-lockfile
+cp .env.example .env
+pnpm dev
 ```
 
-### Scripts principais
+Variáveis necessárias:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_DEFAULT_EMPRESA_SLUG`: slug da loja exibida no cardápio público
+
+## Scripts
 
 ```bash
-npm run dev       # Inicia o servidor de desenvolvimento
-npm run build     # Gera build de produção
-npm run preview   # Visualiza o build localmente
-npm run lint      # Executa verificação estática
+pnpm dev
+pnpm build
+pnpm preview
+pnpm lint
 ```
 
-## Princípios de arquitetura
+## Segurança e multi-tenancy
 
-- Separação clara entre páginas, componentes, layouts, hooks, serviços, dados e tipos.
-- Preparação para multi-tenancy sem acoplar a primeira versão a um provedor específico.
-- Rotas públicas independentes de autenticação.
-- UI responsiva desde a primeira entrega.
-- Espaços reservados para backend e documentação técnica.
+- Cada empresa é vinculada ao proprietário por `empresas.user_id`.
+- O painel administrativo exige uma sessão que seja proprietária de uma empresa.
+- As tabelas de catálogo, clientes e pedidos usam Row Level Security.
+- O checkout chama `criar_pedido_seguro`; preços, taxa e total são recalculados no PostgreSQL.
+- Logos são gravados sob `{empresa_id}/arquivo` e somente o proprietário pode alterá-los.
 
-## Próximos passos sugeridos
+## Preparação do Supabase
 
-1. Definir modelo de tenants, empresas, unidades e cardápios.
-2. Adicionar autenticação e autorização por perfil.
-3. Integrar Supabase para persistência e storage.
-4. Criar painel administrativo para restaurantes.
-5. Implementar geração de pedido e envio via WhatsApp.
+1. Faça backup antes de alterar um ambiente existente.
+2. Aplique as migrações de `supabase/migrations` na ordem.
+3. Associe dados legados ao proprietário preenchendo `empresas.user_id`.
+4. Confirme que produtos, categorias, clientes e pedidos possuem `empresa_id`.
+5. Valide cadastro, compra, painel e upload em homologação antes da produção.
+
+As chaves `VITE_*` são públicas no navegador. Nunca coloque uma `service_role` no frontend.

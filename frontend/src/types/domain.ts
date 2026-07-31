@@ -93,6 +93,7 @@ export interface Produto {
 }
 
 export interface PedidoItem {
+  produtoId?: string;
   nome: string;
   quantidade: number;
   precoUnitario: number;

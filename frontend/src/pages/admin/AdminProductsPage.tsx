@@ -5,8 +5,6 @@ import { useMenuStore } from '../../context/MenuStoreContext';
 import type { MenuCategory, MenuItem } from '../../types/menu';
 import { supabase } from '../../lib/supabase';
 
-const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-
 type ProductFormState = {
   nome: string;
   descricao: string;
@@ -30,7 +28,7 @@ const emptyProductForm: ProductFormState = {
 export function AdminProductsPage() {
   usePageTitle('Admin Produtos');
 
-  const { produtos, categorias, setProdutos } = useMenuStore();
+  const { empresa, produtos, categorias, setProdutos } = useMenuStore();
 
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -64,13 +62,14 @@ export function AdminProductsPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!empresa) return;
     setSalvando(true);
     setErro(null);
 
     const categoriaMatch = categorias.find((c) => c.nome === form.categoria);
 
     const payload = {
-      empresa_id: EMPRESA_ID,
+      empresa_id: empresa.id,
       categoria_id: categoriaMatch?.id ?? null,
       nome: form.nome,
       descricao: form.descricao,

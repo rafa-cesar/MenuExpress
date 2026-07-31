@@ -20,13 +20,13 @@ function Logo() {
 }
 
 export function AdminLayout() {
-  const { session, loading } = useAuth();
+  const { session, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !session) navigate({ to: '/admin/login' });
-  }, [session, loading, navigate]);
+    if (!loading && (!session || !isAdmin)) navigate({ to: '/admin/login' });
+  }, [session, isAdmin, loading, navigate]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -44,7 +44,7 @@ export function AdminLayout() {
     );
   }
 
-  if (!session) return null;
+  if (!session || !isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">

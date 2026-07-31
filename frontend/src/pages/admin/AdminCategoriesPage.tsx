@@ -5,8 +5,6 @@ import type { Categoria } from '../../types/menu';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import { supabase } from '../../lib/supabase';
 
-const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-
 type CategoryFormState = {
   nome: string;
   ordem: string;
@@ -31,18 +29,19 @@ function slugify(value: string) {
 export function AdminCategoriesPage() {
   usePageTitle('Admin Categorias');
 
-  const { categorias, setCategorias } = useMenuStore();
+  const { empresa, categorias, setCategorias } = useMenuStore();
   const [form, setForm] = useState<CategoryFormState>(emptyCategoryForm);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!empresa) return;
     setSalvando(true);
     setErro(null);
 
     const novaCategoria = {
-      empresa_id: EMPRESA_ID,
+      empresa_id: empresa.id,
       nome: form.nome,
       slug: slugify(form.nome),
       ordem: Number(form.ordem),

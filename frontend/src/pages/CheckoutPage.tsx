@@ -134,11 +134,8 @@ export function CheckoutPage() {
       clienteTel: perfil.whatsapp ?? '',
       clienteEnd: modalidade === 'entrega' ? clienteEnd : '',
       clienteId: perfil.id,
-      itens: items.map(i => ({ nome: i.product.nome, quantidade: i.quantity, precoUnitario: i.product.preco, subtotal: i.product.preco * i.quantity })),
+      itens: items.map(i => ({ produtoId: i.product.id, quantidade: i.quantity })),
       observacao,
-      subtotal,
-      taxaEntrega: taxa,
-      total,
     });
     setSalvando(false);
     if (!pedido) { setErro('Erro ao registrar pedido. Tente novamente.'); return; }

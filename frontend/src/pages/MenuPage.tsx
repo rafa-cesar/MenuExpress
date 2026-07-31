@@ -16,7 +16,7 @@ const MOTIVO_LABEL: Record<string, string> = {
   dia_inativo: 'Não abrimos neste dia da semana.',
 };
 
-function EmpresaAvatar({ logoUrl, nome, primary }: { logoUrl?: string | null; nome: string; primary: string }) {
+function EmpresaAvatar({ logoUrl, nome }: { logoUrl?: string | null; nome: string }) {
   const initials = nome.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('');
   if (logoUrl) {
     return (
@@ -39,7 +39,7 @@ export function MenuPage() {
   usePageTitle('Cardápio');
   const { empresa, produtos, categorias, loading, erro } = useMenuStore();
   const storeStatus = useStoreStatus();
-  const { add, qty, items, subtotal, totalItems } = useCart();
+  const { add, dec, qty, items, subtotal, totalItems } = useCart();
   const navigate = useNavigate();
 
   const menuCategories = categorias.map(c => c.nome) as MenuCategory[];
@@ -99,7 +99,7 @@ export function MenuPage() {
           <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
             <div>
               <div className="mb-5 flex items-end gap-4">
-                <EmpresaAvatar logoUrl={empresaData.logoUrl} nome={empresaData.nome} primary={brand.primary} />
+                <EmpresaAvatar logoUrl={empresaData.logoUrl} nome={empresaData.nome} />
                 <div className="flex flex-wrap items-center gap-2 pb-1">
                   <span className="rounded-full px-3 py-1 text-xs font-black" style={{ backgroundColor: `${brand.primary}33`, color: '#fff' }}>Cardápio digital</span>
                   <span className={`rounded-full px-3 py-1 text-xs font-black ${
@@ -169,7 +169,7 @@ export function MenuPage() {
               <MenuCard key={item.id} item={item} quantity={qty(item.id)}
                 onAdd={storeStatus.aberta ? (p: MenuItem) => add(p) : () => {}}
                 onIncrement={id => { const i = items.find(x => x.product.id === id); if (i) add(i.product); }}
-                onDecrement={id => { const cart = useCart; void cart; }}
+                onDecrement={id => dec(id)}
                 disabled={!storeStatus.aberta}
               />
             ))}
