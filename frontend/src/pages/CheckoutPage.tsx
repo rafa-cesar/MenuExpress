@@ -50,9 +50,10 @@ export function CheckoutPage() {
 
   useEffect(() => {
     if (authLoading) return;
+    if (items.length === 0) { navigate({ to: '/cardapio' }); return; }
     if (!user) { navigate({ to: '/checkout/auth' }); return; }
     if (!perfil) { navigate({ to: '/checkout/auth' }); return; }
-  }, [authLoading, user, perfil, navigate]);
+  }, [authLoading, items.length, user, perfil, navigate]);
 
   // Spinner enquanto auth resolve
   if (authLoading) {
