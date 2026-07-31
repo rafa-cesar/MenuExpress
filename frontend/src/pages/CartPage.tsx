@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useCart } from '../context/CartContext';
 import { useMenuStore } from '../context/MenuStoreContext';
 import { useBrand } from '../hooks/useBrand';
+import { getDeliveryFee, getDeliveryMinimum } from '../services/delivery';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -13,8 +14,10 @@ export function CartPage() {
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
 
   const cfg = empresa?.entrega;
-  const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? cfg.taxaEntregaFixa : 0;
+  const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? getDeliveryFee(empresa) : 0;
+  const minimoEntrega = getDeliveryMinimum(empresa);
   const total = subtotal + taxa;
+  const abaixoDoMinimo = modalidade === 'entrega' && subtotal < minimoEntrega;
   const ambasAtivas = Boolean(cfg?.retiradaAtiva && cfg?.entregaAtiva);
 
   if (items.length === 0) {
@@ -103,11 +106,16 @@ export function CartPage() {
             <span>Total</span><span style={{ color: brand.primary }}>{fmt.format(total)}</span>
           </div>
         </div>
+        {abaixoDoMinimo && (
+          <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
+            Pedido mínimo para entrega: {fmt.format(minimoEntrega)}.
+          </p>
+        )}
       </div>
 
       {/* CTA fixo */}
       <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white p-4">
-        <button onClick={() => navigate({ to: '/checkout/resumo' })} className="w-full rounded-full py-4 font-black text-white transition" style={btnStyle}>
+        <button onClick={() => navigate({ to: '/checkout/resumo' })} disabled={abaixoDoMinimo} className="w-full rounded-full py-4 font-black text-white transition disabled:cursor-not-allowed disabled:opacity-50" style={btnStyle}>
           Continuar → Resumo do pedido
         </button>
       </div>
