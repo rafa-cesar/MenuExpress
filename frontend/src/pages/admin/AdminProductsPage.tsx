@@ -28,7 +28,7 @@ const emptyProductForm: ProductFormState = {
 export function AdminProductsPage() {
   usePageTitle('Admin Produtos');
 
-  const { empresa, produtos, categorias, setProdutos } = useMenuStore();
+  const { empresa, produtos, categorias, loading, setProdutos } = useMenuStore();
 
   const [form, setForm] = useState<ProductFormState>(emptyProductForm);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -204,7 +204,9 @@ export function AdminProductsPage() {
             <h2 className="text-xl font-black text-slate-950">Produtos cadastrados</h2>
           </div>
 
-          {produtos.length === 0 ? (
+          {loading ? (
+            <p className="p-6 text-center text-sm text-slate-400">Carregando produtos...</p>
+          ) : produtos.length === 0 ? (
             <p className="p-6 text-center text-sm text-slate-400">Nenhum produto cadastrado ainda.</p>
           ) : (
             <div className="divide-y divide-slate-100">
