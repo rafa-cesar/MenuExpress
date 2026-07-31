@@ -44,7 +44,12 @@ export function AdminLoginPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-bold text-slate-300">Senha</span>
+              <span className="flex items-center justify-between text-sm font-bold text-slate-300">
+                Senha
+                <Link to="/admin/esqueci-senha" className="text-xs text-brand-400 hover:text-brand-300">
+                  Esqueci minha senha
+                </Link>
+              </span>
               <input type="password" required autoComplete="current-password"
                 value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

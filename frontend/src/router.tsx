@@ -12,6 +12,8 @@ import { LoginPage } from './pages/LoginPage';
 import { AdminCategoriesPage } from './pages/admin/AdminCategoriesPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage';
+import { AdminForgotPasswordPage } from './pages/admin/AdminForgotPasswordPage';
+import { AdminResetPasswordPage } from './pages/admin/AdminResetPasswordPage';
 import { AdminOrdersPage } from './pages/admin/AdminOrdersPage';
 import { AdminProductsPage } from './pages/admin/AdminProductsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
@@ -29,6 +31,8 @@ const checkoutRoute    = createRoute({ getParentRoute: () => rootRoute, path: '/
 const clienteAuthRoute = createRoute({ getParentRoute: () => rootRoute, path: '/checkout/auth',   component: ClienteAuthPage });
 const minhaAreaRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/minha-area',      component: MinhaAreaPage });
 const adminLoginRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/admin/login',      component: AdminLoginPage });
+const adminForgotPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/esqueci-senha', component: AdminForgotPasswordPage });
+const adminResetPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/redefinir-senha', component: AdminResetPasswordPage });
 
 const adminRoute            = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: AdminLayout });
 const adminDashboardRoute   = createRoute({ getParentRoute: () => adminRoute, path: '/',              component: AdminDashboardPage });
@@ -48,6 +52,8 @@ const routeTree = rootRoute.addChildren([
   clienteAuthRoute,
   minhaAreaRoute,
   adminLoginRoute,
+  adminForgotPasswordRoute,
+  adminResetPasswordRoute,
   adminRoute.addChildren([
     adminDashboardRoute,
     adminOrdersRoute,
