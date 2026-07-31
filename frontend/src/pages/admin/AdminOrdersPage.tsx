@@ -229,7 +229,14 @@ export function AdminOrdersPage() {
 
   // carregar recebe empresaId explicitamente para evitar closure stale
   const carregar = useCallback(async (empresaId: string) => {
-    const data = await pedidosService.listar(empresaId);
+    const [ativos, historico] = await Promise.all([
+      pedidosService.listar(empresaId),
+      pedidosService.listarHistorico(empresaId),
+    ]);
+    const data = [
+      ...ativos,
+      ...historico.filter((pedido) => pedido.status === 'finalizado'),
+    ];
     const n = data.filter((p) => p.status === 'aguardando').length;
     if (n > prevCount.current) playBeep();
     prevCount.current = n;
