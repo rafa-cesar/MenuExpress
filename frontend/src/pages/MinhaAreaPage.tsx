@@ -57,7 +57,7 @@ function StatusTracker({ pedido }: { pedido: Pedido }) {
 }
 
 export function MinhaAreaPage() {
-  const { user, perfil, logout } = useClienteAuth();
+  const { user, perfil, loading: authLoading, logout } = useClienteAuth();
   const { empresa } = useMenuStore();
   const navigate = useNavigate();
   const brand = useBrand(empresa?.corPrincipal ?? '#f97316', empresa?.estiloVisual ?? 'moderno');
@@ -110,6 +110,14 @@ export function MinhaAreaPage() {
     );
     return () => { subs.forEach(s => s.unsubscribe()); };
   }, [pedidosAtivos]);
+
+  if (authLoading) {
+    return (
+      <section className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
+      </section>
+    );
+  }
 
   if (!user) {
     return (
