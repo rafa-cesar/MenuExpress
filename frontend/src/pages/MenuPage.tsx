@@ -7,6 +7,7 @@ import { useBrand } from '../hooks/useBrand';
 import { useMenuStore } from '../context/MenuStoreContext';
 import { useCart } from '../context/CartContext';
 import type { MenuCategory, MenuItem } from '../types/menu';
+import { getDeliveryFee } from '../services/delivery';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -112,7 +113,7 @@ export function MenuPage() {
               <p className="mt-4 text-sm font-semibold text-white/75">📍 {empresaData.cidade}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {cfg?.retiradaAtiva && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🏠 Retirada disponível</span>}
-                {cfg?.entregaAtiva  && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(cfg.taxaEntregaFixa)}</span>}
+                {cfg?.entregaAtiva  && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(getDeliveryFee(empresaData))}</span>}
               </div>
             </div>
 
