@@ -150,6 +150,12 @@ export function ClienteAuthPage() {
                   {enviando ? 'Entrando...' : 'Entrar'}
                 </button>
               </form>
+              <a
+                href="/admin/esqueci-senha?next=%2Fcheckout%2Fauth"
+                className="mt-4 block w-full text-center text-xs font-bold text-slate-400 underline hover:text-slate-600"
+              >
+                Esqueci minha senha
+              </a>
               <button onClick={() => { setModo('cadastro'); setErroForm(''); }} className="mt-4 w-full text-center text-xs text-slate-400 hover:text-slate-600 underline">
                 Ainda não tenho cadastro
               </button>
