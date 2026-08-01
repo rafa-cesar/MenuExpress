@@ -6,6 +6,7 @@ import { useStoreStatus } from '../hooks/useStoreStatus';
 import { useBrand } from '../hooks/useBrand';
 import { useMenuStore } from '../context/MenuStoreContext';
 import { useCart } from '../context/CartContext';
+import { useClienteAuth } from '../context/ClienteAuthContext';
 import type { MenuCategory, MenuItem } from '../types/menu';
 import { getDeliveryFee } from '../services/delivery';
 
@@ -41,7 +42,9 @@ export function MenuPage() {
   const { empresa, produtos, categorias, loading, erro } = useMenuStore();
   const storeStatus = useStoreStatus();
   const { add, dec, qty, items, subtotal, totalItems } = useCart();
+  const { user, perfil, loading: authLoading, logout } = useClienteAuth();
   const navigate = useNavigate();
+  const isAdminPreview = window.location.pathname.startsWith('/admin');
 
   const menuCategories = categorias.map(c => c.nome) as MenuCategory[];
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | null>(null);
@@ -90,6 +93,51 @@ export function MenuPage() {
   return (
     <section className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_55%,#f8fafc_100%)] pb-24 lg:pb-12">
       <div className="mx-auto max-w-6xl px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
+        {!isAdminPreview && !authLoading && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm sm:px-4">
+            {user ? (
+              <>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  {user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.avatar_url} alt="Foto da conta" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black"
+                      style={{ backgroundColor: brand.primary, color: brand.onPrimary }}>
+                      {(perfil?.nome || user.email || 'C')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Conectado como</p>
+                    <p className="truncate text-xs font-black text-slate-800 sm:text-sm">{perfil?.nome || user.user_metadata?.full_name || user.email}</p>
+                    {perfil?.nome && <p className="truncate text-[10px] text-slate-400">{user.email}</p>}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button type="button" onClick={() => navigate({ to: '/minha-area' })}
+                    className="rounded-xl bg-slate-100 px-3 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-200">
+                    Minha área
+                  </button>
+                  <button type="button" onClick={() => void logout()}
+                    className="rounded-xl px-3 py-2 text-[11px] font-black text-red-500 hover:bg-red-50">
+                    Sair
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs font-black text-slate-800">Você ainda não está conectado</p>
+                  <p className="text-[10px] text-slate-400">Entre para acompanhar seus pedidos.</p>
+                </div>
+                <button type="button" onClick={() => navigate({ to: '/checkout/auth' })}
+                  className="shrink-0 px-4 py-2 text-xs font-black"
+                  style={btnStyle}>
+                  Entrar
+                </button>
+              </>
+            )}
+          </div>
+        )}
         {!storeStatus.aberta && (
           <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
             <p className="text-sm font-black text-red-700">🔴 {MOTIVO_LABEL[storeStatus.motivo] ?? 'Loja fechada.'}</p>
