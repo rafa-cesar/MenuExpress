@@ -16,9 +16,19 @@ export function AdminLoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
     setLoading(false);
-    if (authError) { setError('E-mail ou senha inválidos. Verifique e tente novamente.'); return; }
+    if (authError) {
+      setError(
+        authError.code === 'email_not_confirmed'
+          ? 'Confirme seu e-mail antes de entrar.'
+          : 'E-mail ou senha inválidos. Verifique e tente novamente.'
+      );
+      return;
+    }
     navigate({ to: '/admin' });
   }
 
