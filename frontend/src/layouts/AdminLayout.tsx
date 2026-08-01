@@ -1,13 +1,15 @@
-import { Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { useMenuStore } from '../context/MenuStoreContext';
 
 const navItems = [
   { to: '/admin',               label: 'Dashboard',  exact: true,  icon: '📊' },
   { to: '/admin/pedidos',       label: 'Pedidos',    exact: false, icon: '🛒' },
   { to: '/admin/produtos',      label: 'Produtos',   exact: false, icon: '🍔' },
   { to: '/admin/categorias',    label: 'Categorias', exact: false, icon: '📋' },
+  { to: '/admin/pagamentos',    label: 'Pagamentos', exact: false, icon: '💳' },
   { to: '/admin/configuracoes', label: 'Config.',    exact: false, icon: '⚙️' },
 ];
 
@@ -20,17 +22,29 @@ function Logo() {
 }
 
 export function AdminLayout() {
-  const { session, loading } = useAuth();
+  const { session, isAdmin, loading } = useAuth();
+  const { empresa } = useMenuStore();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isMenuPreview = pathname === '/admin/cardapio';
+  const publicMenuUrl = empresa?.slug
+    ? `${window.location.origin}/cardapio/${encodeURIComponent(empresa.slug)}`
+    : '';
 
   useEffect(() => {
-    if (!loading && !session) navigate({ to: '/admin/login' });
-  }, [session, loading, navigate]);
+    if (!loading && (!session || !isAdmin)) navigate({ to: '/admin/login' });
+  }, [session, isAdmin, loading, navigate]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
     navigate({ to: '/admin/login' });
+  }
+
+  function shareOnWhatsApp() {
+    if (!publicMenuUrl) return;
+    const message = `Veja o cardápio de ${empresa?.nome ?? 'nossa loja'}: ${publicMenuUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   }
 
   if (loading) {
@@ -44,7 +58,7 @@ export function AdminLayout() {
     );
   }
 
-  if (!session) return null;
+  if (!session || !isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -74,10 +88,14 @@ export function AdminLayout() {
 
           {/* Desktop right */}
           <div className="ml-auto hidden items-center gap-3 lg:flex">
-            <a href="/cardapio" target="_blank" rel="noopener noreferrer"
+            <Link to={isMenuPreview ? '/admin' : '/admin/cardapio'}
               className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:border-brand-300 hover:text-brand-600">
-              Ver cardápio ↗
-            </a>
+              {isMenuPreview ? '← Voltar ao painel' : 'Ver cardápio'}
+            </Link>
+            <button type="button" onClick={shareOnWhatsApp} disabled={!publicMenuUrl}
+              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600 disabled:opacity-50">
+              Compartilhar
+            </button>
             <div className="h-5 w-px bg-slate-200" />
             <p className="max-w-[160px] truncate text-xs text-slate-400">{session.user.email}</p>
             <button type="button" onClick={handleLogout}
@@ -88,8 +106,10 @@ export function AdminLayout() {
 
           {/* Mobile right */}
           <div className="ml-auto flex items-center gap-2 lg:hidden">
-            <a href="/cardapio" target="_blank" rel="noopener noreferrer"
-              className="rounded-xl bg-brand-600 px-3 py-2 text-xs font-black text-white">Cardápio ↗</a>
+            <Link to={isMenuPreview ? '/admin' : '/admin/cardapio'}
+              className="rounded-xl bg-brand-600 px-3 py-2 text-xs font-black text-white">
+              {isMenuPreview ? '← Painel' : 'Cardápio'}
+            </Link>
             <button type="button" onClick={() => setMenuOpen((o) => !o)}
               className="rounded-xl border border-slate-200 p-2 text-slate-600" aria-label="Menu">
               {menuOpen
@@ -115,6 +135,10 @@ export function AdminLayout() {
                 </Link>
               ))}
             </nav>
+            <button type="button" onClick={shareOnWhatsApp} disabled={!publicMenuUrl}
+              className="mt-3 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+              Compartilhar cardápio no WhatsApp
+            </button>
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
               <p className="truncate text-xs text-slate-400">{session.user.email}</p>
               <button type="button" onClick={handleLogout}
@@ -132,7 +156,7 @@ export function AdminLayout() {
       </main>
 
       {/* BOTTOM NAV MOBILE */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white shadow-[0_-8px_32px_rgba(15,23,42,0.10)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white shadow-[0_-8px_32px_rgba(15,23,42,0.10)] lg:hidden">
         {navItems.map((item) => (
           <Link key={item.to} to={item.to}
             activeOptions={item.exact ? { exact: true } : undefined}

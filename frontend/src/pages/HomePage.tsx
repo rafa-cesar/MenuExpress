@@ -95,7 +95,7 @@ export function HomePage() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-500">
-            Crie um cardápio digital profissional, receba pedidos e acompanhe seu financeiro — tudo em um só lugar. Sem mensalidade cara, sem comissão por pedido.
+            Crie um cardápio digital profissional, receba pedidos e acompanhe seu financeiro — tudo em um só lugar. Sem mensalidade cara, sem comissão por pedido.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">

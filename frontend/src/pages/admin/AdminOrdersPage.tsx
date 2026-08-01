@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import { pedidosService } from '../../services/pedidosService';
@@ -213,7 +213,7 @@ export function AdminOrdersPage() {
   const prevCount  = useRef(0);
   const tempoPadrao = TEMPO_PADRAO_MIN;
 
-  function playBeep() {
+  const playBeep = useCallback(() => {
     try {
       const ctx  = audioRef.current ?? new AudioContext();
       audioRef.current = ctx;
@@ -225,17 +225,24 @@ export function AdminOrdersPage() {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.4);
     } catch { /* silently fail */ }
-  }
+  }, []);
 
   // carregar recebe empresaId explicitamente para evitar closure stale
-  async function carregar(empresaId: string) {
-    const data = await pedidosService.listar(empresaId);
+  const carregar = useCallback(async (empresaId: string) => {
+    const [ativos, historico] = await Promise.all([
+      pedidosService.listar(empresaId),
+      pedidosService.listarHistorico(empresaId),
+    ]);
+    const data = [
+      ...ativos,
+      ...historico.filter((pedido) => pedido.status === 'finalizado'),
+    ];
     const n = data.filter((p) => p.status === 'aguardando').length;
     if (n > prevCount.current) playBeep();
     prevCount.current = n;
     setPedidos(data);
     setLoading(false);
-  }
+  }, [playBeep]);
 
   useEffect(() => {
     // Não inicia polling enquanto empresa não estiver carregada
@@ -250,7 +257,7 @@ export function AdminOrdersPage() {
       .subscribe();
     const t = setInterval(() => carregar(empresaId), 30_000);
     return () => { supabase.removeChannel(ch); clearInterval(t); };
-  }, [empresa]);
+  }, [empresa, carregar]);
 
   async function avancar(pedido: Pedido, estimativa?: number) {
     if (pedido.status === 'aguardando' && estimativa !== undefined) {

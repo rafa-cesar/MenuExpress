@@ -1,4 +1,4 @@
-import type { Categoria, Empresa, Pedido, Produto } from './domain';
+import type { Categoria, Empresa, Produto } from './domain';
 
 export type MenuCategory = 'Promoções' | 'Hambúrgueres' | 'Combos' | 'Bebidas' | 'Adicionais';
 

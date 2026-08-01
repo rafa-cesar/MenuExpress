@@ -5,8 +5,6 @@ import type { Categoria } from '../../types/menu';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import { supabase } from '../../lib/supabase';
 
-const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-
 type CategoryFormState = {
   nome: string;
   ordem: string;
@@ -31,18 +29,20 @@ function slugify(value: string) {
 export function AdminCategoriesPage() {
   usePageTitle('Admin Categorias');
 
-  const { categorias, setCategorias } = useMenuStore();
+  const { empresa, categorias, loading, setCategorias } = useMenuStore();
   const [form, setForm] = useState<CategoryFormState>(emptyCategoryForm);
   const [salvando, setSalvando] = useState(false);
+  const [atualizandoId, setAtualizandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!empresa) return;
     setSalvando(true);
     setErro(null);
 
     const novaCategoria = {
-      empresa_id: EMPRESA_ID,
+      empresa_id: empresa.id,
       nome: form.nome,
       slug: slugify(form.nome),
       ordem: Number(form.ordem),
@@ -91,6 +91,26 @@ export function AdminCategoriesPage() {
     setCategorias((current) => current.filter((c) => c.id !== categoryId));
   }
 
+  async function toggleCategory(category: Categoria) {
+    setAtualizandoId(category.id);
+    setErro(null);
+    const ativa = !category.ativa;
+    const { error } = await supabase
+      .from('categorias')
+      .update({ ativa })
+      .eq('id', category.id);
+
+    setAtualizandoId(null);
+    if (error) {
+      setErro('Erro ao atualizar categoria: ' + error.message);
+      return;
+    }
+
+    setCategorias((current) =>
+      current.map((item) => (item.id === category.id ? { ...item, ativa } : item)),
+    );
+  }
+
   return (
     <section>
       <AdminSectionHeader
@@ -106,7 +126,9 @@ export function AdminCategoriesPage() {
             <h2 className="text-xl font-black text-slate-950">Categorias cadastradas</h2>
           </div>
 
-          {categorias.length === 0 ? (
+          {loading ? (
+            <p className="p-6 text-sm text-slate-400 text-center">Carregando categorias...</p>
+          ) : categorias.length === 0 ? (
             <p className="p-6 text-sm text-slate-400 text-center">Nenhuma categoria cadastrada ainda.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -137,14 +159,26 @@ export function AdminCategoriesPage() {
                           {category.ativa ? 'Ativa' : 'Inativa'}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => removeCategory(category.id)}
-                          className="rounded-full bg-red-50 px-4 py-1.5 text-xs font-black text-red-600 hover:bg-red-100 transition-colors"
-                        >
-                          Remover
-                        </button>
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            disabled={atualizandoId === category.id}
+                            onClick={() => toggleCategory(category)}
+                            className="rounded-full border border-slate-200 px-4 py-1.5 text-xs font-black text-slate-600 transition-colors hover:border-brand-500 hover:text-brand-600 disabled:opacity-60"
+                          >
+                            {atualizandoId === category.id
+                              ? 'Salvando...'
+                              : category.ativa ? 'Desativar' : 'Ativar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeCategory(category.id)}
+                            className="rounded-full bg-red-50 px-4 py-1.5 text-xs font-black text-red-600 hover:bg-red-100 transition-colors"
+                          >
+                            Remover
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

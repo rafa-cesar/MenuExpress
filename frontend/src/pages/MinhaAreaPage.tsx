@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useClienteAuth } from '../context/ClienteAuthContext';
 import { useMenuStore } from '../context/MenuStoreContext';
@@ -57,7 +57,7 @@ function StatusTracker({ pedido }: { pedido: Pedido }) {
 }
 
 export function MinhaAreaPage() {
-  const { user, perfil, logout } = useClienteAuth();
+  const { user, perfil, loading: authLoading, logout } = useClienteAuth();
   const { empresa } = useMenuStore();
   const navigate = useNavigate();
   const brand = useBrand(empresa?.corPrincipal ?? '#f97316', empresa?.estiloVisual ?? 'moderno');
@@ -65,6 +65,10 @@ export function MinhaAreaPage() {
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
+  const pedidosAtivos = useMemo(
+    () => pedidos.filter((pedido) => !['finalizado', 'cancelado'].includes(pedido.status)),
+    [pedidos],
+  );
 
   useEffect(() => {
     if (!user || !perfil) { setLoading(false); return; }
@@ -77,6 +81,10 @@ export function MinhaAreaPage() {
         status: r.status as PedidoStatus,
         modalidade: r.modalidade as 'retirada' | 'entrega',
         formaPagamento: r.forma_pagamento as Pedido['formaPagamento'],
+        statusPagamento: r.status_pagamento as Pedido['statusPagamento'],
+        provedorPagamento: r.provedor_pagamento as string | undefined,
+        pagamentoUrl: r.pagamento_url as string | undefined,
+        pagoEm: r.pago_em as string | undefined,
         clienteNome: r.cliente_nome as string | undefined,
         clienteTel: r.cliente_tel as string | undefined,
         clienteEnd: r.cliente_end as string | undefined,
@@ -97,16 +105,28 @@ export function MinhaAreaPage() {
 
   // Assina tempo real para pedidos ativos
   useEffect(() => {
-    const ativos = pedidos.filter(p => !['finalizado', 'cancelado'].includes(p.status));
-    const subs = ativos.map(p =>
+    const subs = pedidosAtivos.map(p =>
       clienteService.subscribePedido(p.id, (row) => {
         setPedidos(cur => cur.map(existing =>
-          existing.id === row.id ? { ...existing, status: row.status as PedidoStatus, estimativaMinutos: row.estimativa_minutos as number | undefined } : existing
+          existing.id === row.id ? {
+            ...existing,
+            status: row.status as PedidoStatus,
+            statusPagamento: row.status_pagamento as Pedido['statusPagamento'],
+            estimativaMinutos: row.estimativa_minutos as number | undefined,
+          } : existing
         ));
       })
     );
     return () => { subs.forEach(s => s.unsubscribe()); };
-  }, [pedidos.length]);
+  }, [pedidosAtivos]);
+
+  if (authLoading) {
+    return (
+      <section className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
+      </section>
+    );
+  }
 
   if (!user) {
     return (
@@ -168,7 +188,17 @@ export function MinhaAreaPage() {
                       {pedido.status.replace('_', ' ')}
                     </span>
                   </div>
-                  <StatusTracker pedido={pedido} />
+                  {pedido.formaPagamento === 'online' && pedido.statusPagamento !== 'pago' ? (
+                    <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3">
+                      <p className="text-sm font-black text-amber-800">Pagamento ainda não confirmado</p>
+                      <p className="mt-1 text-xs text-amber-700">O restaurante só receberá o pedido para preparo depois da confirmação.</p>
+                      {pedido.pagamentoUrl && (
+                        <a href={pedido.pagamentoUrl} className="mt-3 inline-flex rounded-xl bg-amber-600 px-4 py-2 text-xs font-black text-white">
+                          Continuar pagamento
+                        </a>
+                      )}
+                    </div>
+                  ) : <StatusTracker pedido={pedido} />}
                   {pedido.estimativaMinutos && (
                     <p className="mt-3 text-xs font-bold text-emerald-600">⏱ Previsão: ~{pedido.estimativaMinutos} min</p>
                   )}

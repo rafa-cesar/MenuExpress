@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useCart } from '../context/CartContext';
 import { useClienteAuth } from '../context/ClienteAuthContext';
@@ -7,14 +7,17 @@ import { useBrand } from '../hooks/useBrand';
 import { pedidosService } from '../services/pedidosService';
 import { buildWhatsAppOrderUrl } from '../services';
 import type { FormaPagamento, Pedido } from '../types/domain';
+import { getDeliveryFee, getDeliveryMinimum } from '../services/delivery';
+import { paymentService } from '../services/paymentService';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const PAGAMENTOS: { value: FormaPagamento; label: string; icon: string }[] = [
-  { value: 'pix',            label: 'Pix',            icon: '⚡' },
-  { value: 'dinheiro',       label: 'Dinheiro',       icon: '💵' },
-  { value: 'cartao_credito', label: 'Cartão Crédito', icon: '💳' },
-  { value: 'cartao_debito',  label: 'Cartão Débito',  icon: '💳' },
+  { value: 'online',         label: 'Pagar agora',       icon: '🔒' },
+  { value: 'dinheiro',       label: 'Dinheiro na retirada', icon: '💵' },
+  { value: 'pix',            label: 'Pix direto na hora',    icon: '⚡' },
+  { value: 'cartao_credito', label: 'Crédito na retirada',  icon: '💳' },
+  { value: 'cartao_debito',  label: 'Débito na retirada',   icon: '💳' },
 ];
 
 const STATUS_LABEL: Record<string, string> = {
@@ -40,16 +43,32 @@ export function CheckoutPage() {
   const [clienteEnd, setClienteEnd] = useState(
     perfil?.endereco ? `${perfil.endereco.rua}, ${perfil.endereco.numero} — ${perfil.endereco.bairro}` : ''
   );
+  const enderecoInputRef = useRef<HTMLInputElement>(null);
 
   const cfg = empresa?.entrega;
-  const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? cfg.taxaEntregaFixa : 0;
+  const taxa = modalidade === 'entrega' && cfg?.entregaAtiva ? getDeliveryFee(empresa) : 0;
+  const minimoEntrega = getDeliveryMinimum(empresa);
   const total = subtotal + taxa;
+  const pagamentos = empresa?.pagamentos;
+  const paymentOptions = useMemo(() => PAGAMENTOS.filter((option) => {
+    if (option.value === 'online') return pagamentos?.onlineAntecipadoAtivo ?? false;
+    if (option.value === 'dinheiro') return pagamentos?.dinheiroNaHoraAtivo ?? true;
+    if (option.value === 'pix') return pagamentos?.pixNaHoraAtivo ?? false;
+    return pagamentos?.cartaoNaHoraAtivo ?? true;
+  }), [pagamentos]);
+
+  useEffect(() => {
+    if (paymentOptions.length > 0 && !paymentOptions.some((option) => option.value === formaPagamento)) {
+      setFormaPagamento(paymentOptions[0].value);
+    }
+  }, [formaPagamento, paymentOptions, setFormaPagamento]);
 
   useEffect(() => {
     if (authLoading) return;
+    if (items.length === 0) { navigate({ to: '/cardapio' }); return; }
     if (!user) { navigate({ to: '/checkout/auth' }); return; }
     if (!perfil) { navigate({ to: '/checkout/auth' }); return; }
-  }, [authLoading, user, perfil, navigate]);
+  }, [authLoading, items.length, user, perfil, navigate]);
 
   // Spinner enquanto auth resolve
   if (authLoading) {
@@ -69,7 +88,7 @@ export function CheckoutPage() {
       ``,
       `👤 ${pedidoFeito.clienteNome}`,
       `📱 ${pedidoFeito.clienteTel || '—'}`,
-      modalidade === 'entrega' ? `📍 Entrega: ${clienteEnd}` : `🏠 Retirada no local`,
+      modalidade === 'entrega' ? `📍 Entrega: ${pedidoFeito.clienteEnd ?? clienteEnd}` : `🏠 Retirada no local`,
       ``,
       ...items.map(i => `• ${i.product.nome} x${i.quantity} — ${fmt.format(i.product.preco * i.quantity)}`),
       ``,
@@ -97,6 +116,17 @@ export function CheckoutPage() {
             <div className="flex justify-between"><span className="text-slate-500">Pagamento</span><span className="font-bold">{PAGAMENTOS.find(p => p.value === pedidoFeito.formaPagamento)?.label}</span></div>
             <div className="flex justify-between border-t border-slate-200 pt-2"><span className="font-black text-slate-900">Total</span><span className="font-black" style={{ color: brand.primary }}>{fmt.format(pedidoFeito.total)}</span></div>
           </div>
+
+          {pedidoFeito.formaPagamento === 'pix' && empresa?.pagamentos?.chavePix && (
+            <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-left">
+              <p className="text-xs font-bold uppercase tracking-wide text-blue-500">Pix direto para o restaurante</p>
+              <p className="mt-2 break-all font-black text-blue-950">{empresa.pagamentos.chavePix}</p>
+              {empresa.pagamentos.nomeBeneficiarioPix && <p className="mt-1 text-xs text-blue-700">Beneficiário: {empresa.pagamentos.nomeBeneficiarioPix}</p>}
+              <button type="button" onClick={() => navigator.clipboard.writeText(empresa.pagamentos?.chavePix ?? '')}
+                className="mt-3 rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white">Copiar chave Pix</button>
+              <p className="mt-3 text-xs text-blue-700">Apresente o comprovante na entrega ou retirada. A confirmação é feita pelo restaurante.</p>
+            </div>
+          )}
 
           <p className="mt-5 text-sm text-slate-400">Acompanhe seu pedido pelo número acima ou clique abaixo.</p>
 
@@ -126,22 +156,43 @@ export function CheckoutPage() {
 
   async function confirmar() {
     if (!empresa || !perfil) { navigate({ to: '/checkout/auth' }); return; }
+    const enderecoEntrega = modalidade === 'entrega'
+      ? (enderecoInputRef.current?.value ?? clienteEnd).trim()
+      : '';
+    if (modalidade === 'entrega' && !enderecoEntrega) {
+      setErro('Informe o endereço completo para entrega.');
+      enderecoInputRef.current?.focus();
+      return;
+    }
+    if (modalidade === 'entrega' && subtotal < minimoEntrega) {
+      setErro(`O pedido mínimo para entrega é ${fmt.format(minimoEntrega)}.`);
+      return;
+    }
     setSalvando(true); setErro('');
     const pedido = await pedidosService.criar(empresa.id, {
       modalidade,
       formaPagamento,
       clienteNome: perfil.nome,
       clienteTel: perfil.whatsapp ?? '',
-      clienteEnd: modalidade === 'entrega' ? clienteEnd : '',
+      clienteEnd: enderecoEntrega,
       clienteId: perfil.id,
-      itens: items.map(i => ({ nome: i.product.nome, quantidade: i.quantity, precoUnitario: i.product.preco, subtotal: i.product.preco * i.quantity })),
+      itens: items.map(i => ({ produtoId: i.product.id, quantidade: i.quantity })),
       observacao,
-      subtotal,
-      taxaEntrega: taxa,
-      total,
     });
+    if (!pedido) { setSalvando(false); setErro('Erro ao registrar pedido. Tente novamente.'); return; }
+    if (formaPagamento === 'online') {
+      try {
+        const pagamentoUrl = await paymentService.iniciarCheckout(pedido.id);
+        clear();
+        window.location.assign(pagamentoUrl);
+        return;
+      } catch (cause) {
+        setSalvando(false);
+        setErro(cause instanceof Error ? cause.message : 'Não foi possível abrir o pagamento.');
+        return;
+      }
+    }
     setSalvando(false);
-    if (!pedido) { setErro('Erro ao registrar pedido. Tente novamente.'); return; }
     setPedidoFeito(pedido);
   }
 
@@ -171,9 +222,12 @@ export function CheckoutPage() {
         {modalidade === 'entrega' && (
           <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
             <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Endereço de entrega</label>
-            <input type="text" value={clienteEnd} onChange={e => setClienteEnd(e.target.value)}
+            <input ref={enderecoInputRef} type="text" required value={clienteEnd} onChange={e => setClienteEnd(e.target.value)}
               placeholder="Rua, número, bairro"
               className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" />
+            {perfil.endereco && (
+              <p className="mt-2 text-xs text-slate-500">Endereço preenchido com os dados salvos. Edite se a entrega for para outro local.</p>
+            )}
           </div>
         )}
 
@@ -199,7 +253,7 @@ export function CheckoutPage() {
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Forma de pagamento</h2>
           <div className="grid grid-cols-2 gap-2">
-            {PAGAMENTOS.map(p => (
+            {paymentOptions.map(p => (
               <button key={p.value} onClick={() => setFormaPagamento(p.value)}
                 className={`flex items-center gap-2 rounded-2xl border-2 px-4 py-3 text-sm font-bold transition ${
                   formaPagamento === p.value ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
@@ -208,14 +262,17 @@ export function CheckoutPage() {
               </button>
             ))}
           </div>
+          {paymentOptions.length === 0 && (
+            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">Este restaurante ainda não habilitou uma forma de pagamento.</p>
+          )}
         </div>
 
         {erro && <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{erro}</p>}
       </div>
 
       <div className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white p-4">
-        <button onClick={confirmar} disabled={salvando} className="w-full rounded-full py-4 font-black text-white disabled:opacity-50" style={btnStyle}>
-          {salvando ? 'Registrando...' : `Confirmar pedido • ${fmt.format(total)}`}
+        <button onClick={confirmar} disabled={salvando || paymentOptions.length === 0} className="w-full rounded-full py-4 font-black text-white disabled:opacity-50" style={btnStyle}>
+          {salvando ? 'Preparando...' : `${formaPagamento === 'online' ? 'Ir para pagamento seguro' : 'Confirmar pedido'} • ${fmt.format(total)}`}
         </button>
       </div>
     </section>

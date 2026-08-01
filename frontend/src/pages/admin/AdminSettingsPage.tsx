@@ -1,11 +1,12 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { LogoUploader } from '../../components/admin/LogoUploader';
+import { CoverImageUploader } from '../../components/admin/CoverImageUploader';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import { useBrand } from '../../hooks/useBrand';
 import { supabase } from '../../lib/supabase';
-import type { ConfigEntrega, EstiloVisual } from '../../types/domain';
+import type { ConfigEntrega, ConfigPagamento, EstiloVisual } from '../../types/domain';
 import type { Empresa } from '../../types/menu';
 
 type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
@@ -27,6 +28,12 @@ const diasPadrao: HorarioDias = {
 };
 
 const ENTREGA_PADRAO: ConfigEntrega = { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 };
+const PAGAMENTO_PADRAO: ConfigPagamento = {
+  onlineAntecipadoAtivo: false,
+  dinheiroNaHoraAtivo: true,
+  cartaoNaHoraAtivo: true,
+  pixNaHoraAtivo: false,
+};
 
 function toMoney(value: unknown): string {
   const n = Number(value);
@@ -48,16 +55,19 @@ const estilos: { value: EstiloVisual; label: string; descricao: string; emoji: s
 
 type SettingsFormState = {
   nomeEmpresa: string; descricao: string; cidadeUf: string; whatsapp: string;
-  corPrincipal: string; logoUrl: string; estiloVisual: EstiloVisual;
+  corPrincipal: string; logoUrl: string; capaUrl: string; estiloVisual: EstiloVisual;
   taxaEntrega: string; pedidoMinimo: string;
   statusLoja: StatusLoja; mensagemCliente: string; dias: HorarioDias;
   retiradaAtiva: boolean; entregaAtiva: boolean;
   taxaEntregaFixa: string; pedidoMinimoEntrega: string;
   endRua: string; endNumero: string; endBairro: string; endCidade: string; endComplemento: string;
+  onlineAntecipadoAtivo: boolean; dinheiroNaHoraAtivo: boolean; cartaoNaHoraAtivo: boolean;
+  pixNaHoraAtivo: boolean; chavePix: string; nomeBeneficiarioPix: string;
 };
 
 function buildForm(empresa: Empresa | null): SettingsFormState {
   const e: ConfigEntrega = { ...ENTREGA_PADRAO, ...empresa?.entrega };
+  const p: ConfigPagamento = { ...PAGAMENTO_PADRAO, ...empresa?.pagamentos };
   return {
     nomeEmpresa: empresa?.nome ?? '',
     descricao: empresa?.descricao ?? '',
@@ -65,6 +75,7 @@ function buildForm(empresa: Empresa | null): SettingsFormState {
     whatsapp: empresa?.whatsapp ?? '',
     corPrincipal: empresa?.corPrincipal ?? '#f97316',
     logoUrl: empresa?.logoUrl ?? '',
+    capaUrl: empresa?.capaUrl ?? '',
     estiloVisual: empresa?.estiloVisual ?? 'moderno',
     taxaEntrega: toMoney(empresa?.taxaEntrega),
     pedidoMinimo: toMoney(empresa?.pedidoMinimo),
@@ -80,6 +91,12 @@ function buildForm(empresa: Empresa | null): SettingsFormState {
     endBairro: e.endereco?.bairro ?? '',
     endCidade: e.endereco?.cidade ?? empresa?.cidade ?? '',
     endComplemento: e.endereco?.complemento ?? '',
+    onlineAntecipadoAtivo: p.onlineAntecipadoAtivo,
+    dinheiroNaHoraAtivo: p.dinheiroNaHoraAtivo,
+    cartaoNaHoraAtivo: p.cartaoNaHoraAtivo,
+    pixNaHoraAtivo: p.pixNaHoraAtivo,
+    chavePix: p.chavePix ?? '',
+    nomeBeneficiarioPix: p.nomeBeneficiarioPix ?? '',
   };
 }
 
@@ -114,7 +131,6 @@ export function AdminSettingsPage() {
       initializedRef.current = true;
       setForm(buildForm(empresa));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, empresa]);
 
   const brandPreview = useBrand(form.corPrincipal, form.estiloVisual);
@@ -124,10 +140,12 @@ export function AdminSettingsPage() {
   }
 
   const nenhumaModalidade = !form.retiradaAtiva && !form.entregaAtiva;
+  const nenhumPagamento = !form.onlineAntecipadoAtivo && !form.dinheiroNaHoraAtivo
+    && !form.cartaoNaHoraAtivo && !form.pixNaHoraAtivo;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (nenhumaModalidade) return;
+    if (nenhumaModalidade || nenhumPagamento) return;
 
     if (!empresa?.id) {
       setErrorMessage('Empresa ainda não carregada. Aguarde e tente novamente.');
@@ -147,6 +165,14 @@ export function AdminSettingsPage() {
         cidade: form.endCidade, complemento: form.endComplemento,
       } : undefined,
     };
+    const pagamentosObj: ConfigPagamento = {
+      onlineAntecipadoAtivo: form.onlineAntecipadoAtivo,
+      dinheiroNaHoraAtivo: form.dinheiroNaHoraAtivo,
+      cartaoNaHoraAtivo: form.cartaoNaHoraAtivo,
+      pixNaHoraAtivo: form.pixNaHoraAtivo,
+      chavePix: form.pixNaHoraAtivo ? form.chavePix.trim() : '',
+      nomeBeneficiarioPix: form.pixNaHoraAtivo ? form.nomeBeneficiarioPix.trim() : '',
+    };
 
     const { data: updatedRows, error } = await supabase
       .from('empresas')
@@ -158,12 +184,14 @@ export function AdminSettingsPage() {
         cor_principal: form.corPrincipal,
         estilo_visual: form.estiloVisual,
         logo_url: form.logoUrl,
+        capa_url: form.capaUrl,
         taxa_entrega: Number(form.taxaEntrega.replace(',', '.')) || 0,
         pedido_minimo: Number(form.pedidoMinimo.replace(',', '.')) || 0,
         horario_status: form.statusLoja,
         horario_mensagem_cliente: form.mensagemCliente,
         horario_dias: form.dias,
         entrega: entregaObj,
+        pagamentos: pagamentosObj,
       })
       .eq('id', empresa.id)
       .select('id');
@@ -184,11 +212,12 @@ export function AdminSettingsPage() {
       ...empresa,
       nome: form.nomeEmpresa, descricao: form.descricao, cidade: form.cidadeUf,
       whatsapp: form.whatsapp, corPrincipal: form.corPrincipal,
-      logoUrl: form.logoUrl, estiloVisual: form.estiloVisual,
+      logoUrl: form.logoUrl, capaUrl: form.capaUrl, estiloVisual: form.estiloVisual,
       taxaEntrega: Number(form.taxaEntrega.replace(',', '.')) || 0,
       pedidoMinimo: Number(form.pedidoMinimo.replace(',', '.')) || 0,
       horario: { status: form.statusLoja, mensagemCliente: form.mensagemCliente, dias: form.dias },
       entrega: entregaObj,
+      pagamentos: pagamentosObj,
     };
     setEmpresa(empresaAtualizada);
 
@@ -235,6 +264,15 @@ export function AdminSettingsPage() {
               ) : (
                 <p className="text-sm text-slate-400">Carregando dados da empresa...</p>
               )}
+            </div>
+            <div className="lg:col-span-2">
+              {empresa?.id ? (
+                <CoverImageUploader
+                  empresaId={empresa.id}
+                  currentUrl={form.capaUrl}
+                  onUploaded={(url) => setForm((current) => ({ ...current, capaUrl: url }))}
+                />
+              ) : null}
             </div>
             {/* ─────────────────────────────────────────────────────── */}
 
@@ -359,6 +397,50 @@ export function AdminSettingsPage() {
           </div>
         </div>
 
+        {/* Formas de pagamento */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="mb-1 text-lg font-black text-slate-950">Formas de pagamento</h2>
+          <p className="mb-5 text-sm text-slate-500">Escolha como seus clientes poderão pagar. O cardápio mostrará apenas as opções habilitadas.</p>
+          <div className="space-y-5">
+            <Toggle checked={form.onlineAntecipadoAtivo}
+              onChange={(v) => setForm((f) => ({ ...f, onlineAntecipadoAtivo: v }))}
+              label="Pagamento antecipado online"
+              description="Pix ou cartão no checkout seguro. O pedido só vai para a cozinha depois da confirmação." />
+            {form.onlineAntecipadoAtivo && (
+              <p className="ml-14 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700">Conecte também a conta do restaurante na página Pagamentos.</p>
+            )}
+            <Toggle checked={form.dinheiroNaHoraAtivo}
+              onChange={(v) => setForm((f) => ({ ...f, dinheiroNaHoraAtivo: v }))}
+              label="Dinheiro na entrega ou retirada"
+              description="O restaurante recebe quando entregar o pedido." />
+            <Toggle checked={form.cartaoNaHoraAtivo}
+              onChange={(v) => setForm((f) => ({ ...f, cartaoNaHoraAtivo: v }))}
+              label="Cartão na entrega ou retirada"
+              description="Pagamento presencial na maquininha do próprio restaurante." />
+            <Toggle checked={form.pixNaHoraAtivo}
+              onChange={(v) => setForm((f) => ({ ...f, pixNaHoraAtivo: v }))}
+              label="Pix direto na hora"
+              description="O cliente paga pela chave do restaurante; a confirmação é manual." />
+            {form.pixNaHoraAtivo && (
+              <div className="ml-14 grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-bold text-slate-700">
+                  Chave Pix
+                  <input value={form.chavePix} onChange={(e) => setForm((f) => ({ ...f, chavePix: e.target.value }))}
+                    placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" className={inputClass} />
+                </label>
+                <label className="block text-sm font-bold text-slate-700">
+                  Nome do beneficiário
+                  <input value={form.nomeBeneficiarioPix} onChange={(e) => setForm((f) => ({ ...f, nomeBeneficiarioPix: e.target.value }))}
+                    placeholder="Nome que aparecerá para o cliente" className={inputClass} />
+                </label>
+              </div>
+            )}
+            {nenhumPagamento && (
+              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">Ative ao menos uma forma de pagamento.</p>
+            )}
+          </div>
+        </div>
+
         {/* Status e horários */}
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <h2 className="mb-1 text-lg font-black text-slate-950">Status e horários</h2>
@@ -403,7 +485,7 @@ export function AdminSettingsPage() {
           </div>
         )}
 
-        <button type="submit" disabled={saving || nenhumaModalidade}
+        <button type="submit" disabled={saving || nenhumaModalidade || nenhumPagamento}
           className="w-full rounded-2xl bg-slate-950 px-6 py-4 font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
           {saving ? 'Salvando...' : 'Salvar configurações'}
         </button>

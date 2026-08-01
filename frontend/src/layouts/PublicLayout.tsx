@@ -45,7 +45,7 @@ export function PublicLayout() {
             <span className="text-slate-950">Menu</span><span className="text-brand-600">Express</span>
           </Link>
           <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <Link to="/" className="hover:text-brand-600">Home</Link>
+            <Link to="/cardapio" className="hover:text-brand-600">Cardápio</Link>
             {isAdmin && (
               <Link to="/admin" className="rounded-full border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand-600 hover:text-brand-600">
                 ← Admin

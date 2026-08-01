@@ -50,10 +50,30 @@ export function ClienteAuthProvider({ children }: { children: ReactNode }) {
 
   const loginComGoogle = async () => {
     setAuthError(null);
-    await supabase.auth.signInWithOAuth({
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+    try {
+      const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+        headers: { apikey: anonKey },
+      });
+      const settings = await response.json() as { external?: { google?: boolean } };
+      if (!settings.external?.google) {
+        throw new Error('google_provider_disabled');
+      }
+    } catch (error) {
+      setAuthError('O acesso com Google está temporariamente indisponível. Use e-mail e senha.');
+      throw error;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/checkout/auth` },
     });
+    if (error) {
+      setAuthError('Não foi possível iniciar o acesso com Google. Tente novamente.');
+      throw error;
+    }
   };
 
   const loginComEmail = async (email: string, senha: string) => {

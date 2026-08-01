@@ -1,14 +1,9 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Categoria, Empresa, MenuItem } from '../types/menu';
-import type { ConfigEntrega, EmpresaStatus } from '../types/domain';
+import type { ConfigEntrega, ConfigPagamento, EmpresaStatus } from '../types/domain';
 import type { MenuCategory } from '../types/menu';
 import type { EstiloVisual } from '../types/domain';
-
-// EMPRESA_ID fixo: solução monoempresa para o MVP.
-// Para evoluir para SaaS multiempresa, este valor deve ser substituído
-// pela descoberta dinâmica via slug da rota ou auth.uid() → owner_id.
-const EMPRESA_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 export type MenuStoreState = {
   empresa: Empresa | null;
@@ -67,6 +62,7 @@ function applyBrandVars(cor: string) {
 
 function mapEmpresa(row: Record<string, unknown>): Empresa {
   const entregaRaw = row.entrega as ConfigEntrega | null;
+  const pagamentosRaw = row.pagamentos as ConfigPagamento | null;
   return {
     id: row.id as string,
     nome: row.nome as string,
@@ -82,12 +78,19 @@ function mapEmpresa(row: Record<string, unknown>): Empresa {
     taxaEntrega: Number(row.taxa_entrega ?? 0),
     pedidoMinimo: Number(row.pedido_minimo ?? 0),
     logoUrl: (row.logo_url as string) ?? '',
+    capaUrl: (row.capa_url as string) ?? '',
     horario: {
       status: (row.horario_status as Empresa['horario']['status']) ?? 'automatico',
       mensagemCliente: (row.horario_mensagem_cliente as string) ?? '',
       dias: row.horario_dias as Empresa['horario']['dias'],
     },
     entrega: entregaRaw ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 },
+    pagamentos: pagamentosRaw ?? {
+      onlineAntecipadoAtivo: false,
+      dinheiroNaHoraAtivo: true,
+      cartaoNaHoraAtivo: true,
+      pixNaHoraAtivo: false,
+    },
   };
 }
 
@@ -143,20 +146,41 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setErro(null);
       try {
-        const [{ data: empresaData, error: empresaError }, { data: categoriasData }, { data: produtosData }] =
-          await Promise.all([
-            supabase.from('empresas').select('*').eq('id', EMPRESA_ID).single(),
-            supabase.from('categorias').select('*').eq('empresa_id', EMPRESA_ID).eq('ativa', true).order('ordem'),
-            supabase.from('produtos').select('*').eq('empresa_id', EMPRESA_ID).eq('disponivel', true).order('criado_em'),
-          ]);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const ownerId = sessionData.session?.user.id;
+        const defaultSlug = import.meta.env.VITE_DEFAULT_EMPRESA_SLUG as string | undefined;
+        const defaultId = import.meta.env.VITE_DEFAULT_EMPRESA_ID as string | undefined;
+        const publicSlugMatch = window.location.pathname.match(/^\/cardapio\/([^/]+)\/?$/);
+        const publicSlug = publicSlugMatch ? decodeURIComponent(publicSlugMatch[1]) : null;
+        const checkoutPath = window.location.pathname.startsWith('/checkout') || window.location.pathname === '/minha-area';
+        const rememberedSlug = checkoutPath ? sessionStorage.getItem('menuexpress_tenant_slug') : null;
+        const requestedSlug = publicSlug ?? rememberedSlug;
 
-        if (empresaError || !empresaData) {
-          // Empresa não encontrada: expõe erro, NÃO usa dados demo
-          const msg = empresaError?.message ?? 'Empresa não encontrada no banco de dados.';
-          console.error('[MenuStore] Empresa não encontrada:', msg);
-          setErro('Não foi possível carregar o cardápio. ' + msg);
-          return;
+        if (publicSlug) sessionStorage.setItem('menuexpress_tenant_slug', publicSlug);
+
+        let empresaQuery = supabase.from('empresas').select('*');
+        if (requestedSlug) {
+          empresaQuery = empresaQuery.eq('slug', requestedSlug).eq('status', 'ativa');
+        } else if (ownerId) {
+          empresaQuery = empresaQuery.eq('user_id', ownerId);
+        } else if (defaultSlug) {
+          empresaQuery = empresaQuery.eq('slug', defaultSlug).eq('status', 'ativa');
+        } else if (defaultId) {
+          empresaQuery = empresaQuery.eq('id', defaultId).eq('status', 'ativa');
+        } else {
+          throw new Error('Configure VITE_DEFAULT_EMPRESA_SLUG para o cardápio público.');
         }
+
+        const { data: empresaData, error: empresaError } = await empresaQuery.maybeSingle();
+        if (empresaError || !empresaData) {
+          throw new Error(empresaError?.message ?? 'Empresa não encontrada.');
+        }
+        const empresaId = empresaData.id as string;
+
+        const [{ data: categoriasData }, { data: produtosData }] = await Promise.all([
+          supabase.from('categorias').select('*').eq('empresa_id', empresaId).order('ordem'),
+          supabase.from('produtos').select('*').eq('empresa_id', empresaId).order('criado_em'),
+        ]);
 
         setEmpresa(mapEmpresa(empresaData as Record<string, unknown>));
         // Sempre sobrescreve o estado — array vazio é resultado válido (sem categorias/produtos cadastrados)
@@ -170,13 +194,15 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-    fetchAll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    void fetchAll();
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      void fetchAll();
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   const value = useMemo<MenuStoreContextValue>(
     () => ({ empresa, categorias, produtos, loading, erro, setEmpresa, setCategorias, setProdutos }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [empresa, categorias, produtos, loading, erro],
   );
 
