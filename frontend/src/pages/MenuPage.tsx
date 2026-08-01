@@ -84,6 +84,7 @@ export function MenuPage() {
   const activeCategory = selectedCategory ?? menuCategories[0] ?? null;
   const filteredItems = produtos.filter(item => item.categoria === activeCategory);
   const featuredItem = produtos.find(item => item.destaque) ?? produtos[0];
+  const coverImage = empresaData.capaUrl || featuredItem?.imagem;
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
 
   return (
@@ -99,7 +100,7 @@ export function MenuPage() {
         {/* Hero */}
         <div className="relative isolate overflow-hidden rounded-[2rem] border border-slate-200/70 bg-[#fffdfa] shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
           <div className="pointer-events-none absolute inset-y-0 right-0 w-[43%] bg-slate-100 sm:w-[46%]">
-            {featuredItem && <img src={featuredItem.imagem} alt="" className="h-full w-full object-cover" />}
+            {coverImage && <img src={coverImage} alt={`Capa de ${empresaData.nome}`} className="h-full w-full object-cover" />}
             <div className="absolute inset-0 bg-gradient-to-r from-[#fffdfa] via-[#fffdfa]/20 to-transparent" />
           </div>
           <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full border-[18px] opacity-80" style={{ borderColor: brand.primary }} />
