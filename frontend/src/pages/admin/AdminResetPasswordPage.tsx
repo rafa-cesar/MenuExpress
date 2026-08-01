@@ -57,8 +57,9 @@ export function AdminResetPasswordPage() {
       return;
     }
 
-    await supabase.auth.signOut();
-    window.location.replace(nextPath);
+    // A atualização bem-sucedida já deixa uma sessão válida. Mantê-la evita
+    // exigir que a pessoa redigite imediatamente a senha que acabou de criar.
+    window.location.replace(nextPath === '/admin/login' ? '/admin' : nextPath);
   }
 
   return (
