@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useState, useMemo } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState, useMemo } from 'react';
 import type { CartItem } from '../types/menu';
 import type { ModalidadeEntrega, FormaPagamento } from '../types/domain';
 
@@ -21,12 +21,44 @@ export interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
+const CART_STORAGE_KEY = 'menuexpress:carrinho';
+
+function carregarCarrinho(): CartItem[] {
+  try {
+    const salvo = window.localStorage.getItem(CART_STORAGE_KEY);
+    if (!salvo) return [];
+    const itens = JSON.parse(salvo) as unknown;
+    if (!Array.isArray(itens)) return [];
+    return itens.filter((item): item is CartItem => {
+      if (!item || typeof item !== 'object') return false;
+      const candidato = item as Partial<CartItem>;
+      return Boolean(
+        candidato.product &&
+        typeof candidato.product.id === 'string' &&
+        typeof candidato.product.preco === 'number' &&
+        Number.isInteger(candidato.quantity) &&
+        Number(candidato.quantity) > 0
+      );
+    });
+  } catch {
+    return [];
+  }
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(carregarCarrinho);
   const [modalidade, setModalidade] = useState<ModalidadeEntrega>('retirada');
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('pix');
   const [observacao, setObservacao] = useState('');
+
+  useEffect(() => {
+    try {
+      if (items.length) window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+      else window.localStorage.removeItem(CART_STORAGE_KEY);
+    } catch {
+      // O carrinho continua funcional mesmo se o navegador bloquear o armazenamento.
+    }
+  }, [items]);
 
   const add = (product: import('../types/menu').MenuItem) =>
     setItems(cur =>
