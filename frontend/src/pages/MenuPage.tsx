@@ -83,6 +83,7 @@ export function MenuPage() {
   const empresaData = empresa;
   const activeCategory = selectedCategory ?? menuCategories[0] ?? null;
   const filteredItems = produtos.filter(item => item.categoria === activeCategory);
+  const featuredItem = produtos.find(item => item.destaque) ?? produtos[0];
   const btnStyle = { backgroundColor: brand.primary, color: brand.onPrimary, borderRadius: brand.buttonRadius };
 
   return (
@@ -96,44 +97,47 @@ export function MenuPage() {
         )}
 
         {/* Hero */}
-        <div className="relative isolate overflow-hidden rounded-[2rem] text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)]" style={{ background: brand.heroGradient }}>
-          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full border border-white/15 bg-white/10" />
-          <div className="pointer-events-none absolute -bottom-28 -left-16 h-64 w-64 rounded-full bg-black/15 blur-2xl" />
-          <div className="relative grid gap-4 p-5 sm:gap-6 sm:p-8 lg:grid-cols-[1.25fr_0.75fr] lg:p-10">
-            <div>
-              <div className="mb-3 flex items-center gap-3 sm:mb-5 sm:items-end sm:gap-4">
-                <EmpresaAvatar logoUrl={empresaData.logoUrl} nome={empresaData.nome} />
-                <div className="flex flex-wrap items-center gap-2 pb-1">
-                  <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white/90 backdrop-blur sm:px-3 sm:text-xs">Cardápio digital</span>
-                  <span className={`rounded-full px-3 py-1 text-xs font-black ${
-                    storeStatus.aberta ? 'bg-emerald-500/20 text-emerald-100' : 'bg-red-500/20 text-red-100'
-                  }`}>{storeStatus.aberta ? '🟢 Aberta' : '🔴 Fechada'}</span>
-                </div>
-              </div>
-              <h1 className={`text-3xl sm:text-4xl lg:text-5xl ${brand.titleClass}`}>{empresaData.nome}</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:mt-4 sm:text-base sm:leading-7">{empresaData.descricao}</p>
-              <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
-                <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold text-white/85 backdrop-blur">📍 {empresaData.cidade}</span>
-                {cfg?.retiradaAtiva && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🏠 Retirada disponível</span>}
-                {cfg?.entregaAtiva  && <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/90">🚚 Entrega — {fmt.format(getDeliveryFee(empresaData))}</span>}
+        <div className="relative isolate overflow-hidden rounded-[2rem] border border-slate-200/70 bg-[#fffdfa] shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-[43%] bg-slate-100 sm:w-[46%]">
+            {featuredItem && <img src={featuredItem.imagem} alt="" className="h-full w-full object-cover" />}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#fffdfa] via-[#fffdfa]/20 to-transparent" />
+          </div>
+          <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full border-[18px] opacity-80" style={{ borderColor: brand.primary }} />
+          <div className="relative max-w-[72%] p-5 pb-4 sm:max-w-[68%] sm:p-8 lg:max-w-[62%] lg:p-10">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <EmpresaAvatar logoUrl={empresaData.logoUrl} nome={empresaData.nome} />
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400 sm:text-[10px]">Menu autoral</p>
+                <span className={`mt-1 inline-flex items-center gap-1.5 text-[10px] font-black sm:text-xs ${storeStatus.aberta ? 'text-emerald-700' : 'text-red-600'}`}>
+                  <span className={`h-2 w-2 rounded-full ${storeStatus.aberta ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                  {storeStatus.aberta ? 'Aberta agora' : 'Fechada'}
+                </span>
               </div>
             </div>
 
-            {/* Mini carrinho no hero */}
-            <div className="flex items-center gap-4 rounded-[1.5rem] border border-white/10 p-4 sm:p-5 lg:block" style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(16px)' }}>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/55 sm:text-xs">Seu pedido</p>
-                <p className="mt-1 text-2xl font-black sm:text-3xl lg:mt-3">{fmt.format(subtotal)}</p>
-                <p className="text-[11px] text-white/55 lg:mt-1">{totalItems} item(ns) · sem taxa</p>
-              </div>
-              <button type="button"
-                onClick={() => storeStatus.aberta && items.length > 0 && navigate({ to: '/checkout/carrinho' })}
-                disabled={!storeStatus.aberta || items.length === 0}
-                className="shrink-0 px-4 py-3 text-xs font-black transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-5 sm:text-sm lg:mt-5 lg:w-full"
-                style={btnStyle}>
-                {!storeStatus.aberta ? 'Loja Fechada' : items.length === 0 ? 'Adicione produtos' : `Ver carrinho (${totalItems})`}
-              </button>
+            <div className="my-5 h-px w-14 sm:my-6" style={{ backgroundColor: brand.primary }} />
+            <h1 className="max-w-sm font-serif text-[2rem] font-black leading-[0.95] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">{empresaData.nome}</h1>
+            <p className="mt-4 line-clamp-3 max-w-md text-xs leading-5 text-slate-600 sm:text-sm sm:leading-6 lg:text-base">{empresaData.descricao}</p>
+            <div className="mt-4 flex flex-col items-start gap-1 text-[10px] font-bold text-slate-500 sm:flex-row sm:flex-wrap sm:gap-3 sm:text-xs">
+              <span>📍 {empresaData.cidade}</span>
+              {cfg?.retiradaAtiva && <span>Retirada disponível</span>}
+              {cfg?.entregaAtiva && <span>Entrega · {fmt.format(getDeliveryFee(empresaData))}</span>}
             </div>
+          </div>
+
+          <div className="relative mx-4 mb-4 flex items-center gap-3 rounded-[1.25rem] border border-slate-200/80 bg-white/90 p-3 shadow-sm backdrop-blur sm:mx-8 sm:mb-7 sm:p-4 lg:absolute lg:bottom-8 lg:right-8 lg:m-0 lg:w-72 lg:block">
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Seu pedido</p>
+              <p className="mt-0.5 text-xl font-black text-slate-950 sm:text-2xl">{fmt.format(subtotal)}</p>
+              <p className="text-[10px] text-slate-400">{totalItems} item(ns) · sem taxa</p>
+            </div>
+            <button type="button"
+              onClick={() => storeStatus.aberta && items.length > 0 && navigate({ to: '/checkout/carrinho' })}
+              disabled={!storeStatus.aberta || items.length === 0}
+              className="shrink-0 px-4 py-2.5 text-[11px] font-black transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 sm:text-xs lg:mt-3 lg:w-full"
+              style={btnStyle}>
+              {!storeStatus.aberta ? 'Loja Fechada' : items.length === 0 ? 'Escolha um item' : `Ver carrinho (${totalItems})`}
+            </button>
           </div>
         </div>
 
