@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { LogoUploader } from '../../components/admin/LogoUploader';
+import { CoverImageUploader } from '../../components/admin/CoverImageUploader';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import { useBrand } from '../../hooks/useBrand';
@@ -48,7 +49,7 @@ const estilos: { value: EstiloVisual; label: string; descricao: string; emoji: s
 
 type SettingsFormState = {
   nomeEmpresa: string; descricao: string; cidadeUf: string; whatsapp: string;
-  corPrincipal: string; logoUrl: string; estiloVisual: EstiloVisual;
+  corPrincipal: string; logoUrl: string; capaUrl: string; estiloVisual: EstiloVisual;
   taxaEntrega: string; pedidoMinimo: string;
   statusLoja: StatusLoja; mensagemCliente: string; dias: HorarioDias;
   retiradaAtiva: boolean; entregaAtiva: boolean;
@@ -65,6 +66,7 @@ function buildForm(empresa: Empresa | null): SettingsFormState {
     whatsapp: empresa?.whatsapp ?? '',
     corPrincipal: empresa?.corPrincipal ?? '#f97316',
     logoUrl: empresa?.logoUrl ?? '',
+    capaUrl: empresa?.capaUrl ?? '',
     estiloVisual: empresa?.estiloVisual ?? 'moderno',
     taxaEntrega: toMoney(empresa?.taxaEntrega),
     pedidoMinimo: toMoney(empresa?.pedidoMinimo),
@@ -157,6 +159,7 @@ export function AdminSettingsPage() {
         cor_principal: form.corPrincipal,
         estilo_visual: form.estiloVisual,
         logo_url: form.logoUrl,
+        capa_url: form.capaUrl,
         taxa_entrega: Number(form.taxaEntrega.replace(',', '.')) || 0,
         pedido_minimo: Number(form.pedidoMinimo.replace(',', '.')) || 0,
         horario_status: form.statusLoja,
@@ -183,7 +186,7 @@ export function AdminSettingsPage() {
       ...empresa,
       nome: form.nomeEmpresa, descricao: form.descricao, cidade: form.cidadeUf,
       whatsapp: form.whatsapp, corPrincipal: form.corPrincipal,
-      logoUrl: form.logoUrl, estiloVisual: form.estiloVisual,
+      logoUrl: form.logoUrl, capaUrl: form.capaUrl, estiloVisual: form.estiloVisual,
       taxaEntrega: Number(form.taxaEntrega.replace(',', '.')) || 0,
       pedidoMinimo: Number(form.pedidoMinimo.replace(',', '.')) || 0,
       horario: { status: form.statusLoja, mensagemCliente: form.mensagemCliente, dias: form.dias },
@@ -234,6 +237,15 @@ export function AdminSettingsPage() {
               ) : (
                 <p className="text-sm text-slate-400">Carregando dados da empresa...</p>
               )}
+            </div>
+            <div className="lg:col-span-2">
+              {empresa?.id ? (
+                <CoverImageUploader
+                  empresaId={empresa.id}
+                  currentUrl={form.capaUrl}
+                  onUploaded={(url) => setForm((current) => ({ ...current, capaUrl: url }))}
+                />
+              ) : null}
             </div>
             {/* ─────────────────────────────────────────────────────── */}
 
