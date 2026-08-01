@@ -23,6 +23,7 @@ const rootRoute    = createRootRoute({ component: PublicLayout });
 
 const homeRoute        = createRoute({ getParentRoute: () => rootRoute, path: '/',                 component: HomePage });
 const menuRoute        = createRoute({ getParentRoute: () => rootRoute, path: '/cardapio',         component: MenuPage });
+const tenantMenuRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/cardapio/$slug',   component: MenuPage });
 const loginRoute       = createRoute({ getParentRoute: () => rootRoute, path: '/login',            component: LoginPage });
 const assinarRoute     = createRoute({ getParentRoute: () => rootRoute, path: '/assinar',          component: AssinarPage });
 const cadastroRoute    = createRoute({ getParentRoute: () => rootRoute, path: '/cadastro',         component: CadastroPage });
@@ -40,10 +41,12 @@ const adminOrdersRoute      = createRoute({ getParentRoute: () => adminRoute, pa
 const adminProductsRoute    = createRoute({ getParentRoute: () => adminRoute, path: '/produtos',      component: AdminProductsPage });
 const adminCategoriesRoute  = createRoute({ getParentRoute: () => adminRoute, path: '/categorias',   component: AdminCategoriesPage });
 const adminSettingsRoute    = createRoute({ getParentRoute: () => adminRoute, path: '/configuracoes', component: AdminSettingsPage });
+const adminMenuRoute        = createRoute({ getParentRoute: () => adminRoute, path: '/cardapio',      component: MenuPage });
 
 const routeTree = rootRoute.addChildren([
   homeRoute,
   menuRoute,
+  tenantMenuRoute,
   loginRoute,
   assinarRoute,
   cadastroRoute,
@@ -60,6 +63,7 @@ const routeTree = rootRoute.addChildren([
     adminProductsRoute,
     adminCategoriesRoute,
     adminSettingsRoute,
+    adminMenuRoute,
   ]),
 ]);
 
