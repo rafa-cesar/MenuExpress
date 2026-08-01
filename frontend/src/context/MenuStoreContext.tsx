@@ -77,6 +77,7 @@ function mapEmpresa(row: Record<string, unknown>): Empresa {
     taxaEntrega: Number(row.taxa_entrega ?? 0),
     pedidoMinimo: Number(row.pedido_minimo ?? 0),
     logoUrl: (row.logo_url as string) ?? '',
+    capaUrl: (row.capa_url as string) ?? '',
     horario: {
       status: (row.horario_status as Empresa['horario']['status']) ?? 'automatico',
       mensagemCliente: (row.horario_mensagem_cliente as string) ?? '',
