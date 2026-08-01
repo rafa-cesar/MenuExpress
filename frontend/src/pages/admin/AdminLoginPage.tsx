@@ -97,11 +97,6 @@ export function AdminLoginPage() {
             </button>
           </form>
         </div>
-
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Não tem uma conta?{' '}
-          <Link to="/cadastro" className="font-bold text-brand-500 hover:text-brand-400">Criar conta grátis</Link>
-        </p>
       </div>
     </div>
   );
