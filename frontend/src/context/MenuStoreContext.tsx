@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Categoria, Empresa, MenuItem } from '../types/menu';
-import type { ConfigEntrega, EmpresaStatus } from '../types/domain';
+import type { ConfigEntrega, ConfigPagamento, EmpresaStatus } from '../types/domain';
 import type { MenuCategory } from '../types/menu';
 import type { EstiloVisual } from '../types/domain';
 
@@ -62,6 +62,7 @@ function applyBrandVars(cor: string) {
 
 function mapEmpresa(row: Record<string, unknown>): Empresa {
   const entregaRaw = row.entrega as ConfigEntrega | null;
+  const pagamentosRaw = row.pagamentos as ConfigPagamento | null;
   return {
     id: row.id as string,
     nome: row.nome as string,
@@ -84,6 +85,12 @@ function mapEmpresa(row: Record<string, unknown>): Empresa {
       dias: row.horario_dias as Empresa['horario']['dias'],
     },
     entrega: entregaRaw ?? { retiradaAtiva: true, entregaAtiva: false, taxaEntregaFixa: 0, pedidoMinimoEntrega: 0 },
+    pagamentos: pagamentosRaw ?? {
+      onlineAntecipadoAtivo: false,
+      dinheiroNaHoraAtivo: true,
+      cartaoNaHoraAtivo: true,
+      pixNaHoraAtivo: false,
+    },
   };
 }
 

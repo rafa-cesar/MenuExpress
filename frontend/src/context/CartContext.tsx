@@ -53,7 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loadedEmpresaId, setLoadedEmpresaId] = useState<string | null>(null);
   const [modalidade, setModalidade] = useState<ModalidadeEntrega>('retirada');
-  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('pix');
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('online');
   const [observacao, setObservacao] = useState('');
 
   useEffect(() => {

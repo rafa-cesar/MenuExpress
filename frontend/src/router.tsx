@@ -17,6 +17,7 @@ import { AdminResetPasswordPage } from './pages/admin/AdminResetPasswordPage';
 import { AdminOrdersPage } from './pages/admin/AdminOrdersPage';
 import { AdminProductsPage } from './pages/admin/AdminProductsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 import { MenuPage } from './pages/MenuPage';
 
 const rootRoute    = createRootRoute({ component: PublicLayout });
@@ -41,6 +42,7 @@ const adminOrdersRoute      = createRoute({ getParentRoute: () => adminRoute, pa
 const adminProductsRoute    = createRoute({ getParentRoute: () => adminRoute, path: '/produtos',      component: AdminProductsPage });
 const adminCategoriesRoute  = createRoute({ getParentRoute: () => adminRoute, path: '/categorias',   component: AdminCategoriesPage });
 const adminSettingsRoute    = createRoute({ getParentRoute: () => adminRoute, path: '/configuracoes', component: AdminSettingsPage });
+const adminPaymentsRoute    = createRoute({ getParentRoute: () => adminRoute, path: '/pagamentos',     component: AdminPaymentsPage });
 const adminMenuRoute        = createRoute({ getParentRoute: () => adminRoute, path: '/cardapio',      component: MenuPage });
 
 const routeTree = rootRoute.addChildren([
@@ -63,6 +65,7 @@ const routeTree = rootRoute.addChildren([
     adminProductsRoute,
     adminCategoriesRoute,
     adminSettingsRoute,
+    adminPaymentsRoute,
     adminMenuRoute,
   ]),
 ]);

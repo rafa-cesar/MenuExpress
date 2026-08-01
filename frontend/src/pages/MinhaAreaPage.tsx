@@ -81,6 +81,10 @@ export function MinhaAreaPage() {
         status: r.status as PedidoStatus,
         modalidade: r.modalidade as 'retirada' | 'entrega',
         formaPagamento: r.forma_pagamento as Pedido['formaPagamento'],
+        statusPagamento: r.status_pagamento as Pedido['statusPagamento'],
+        provedorPagamento: r.provedor_pagamento as string | undefined,
+        pagamentoUrl: r.pagamento_url as string | undefined,
+        pagoEm: r.pago_em as string | undefined,
         clienteNome: r.cliente_nome as string | undefined,
         clienteTel: r.cliente_tel as string | undefined,
         clienteEnd: r.cliente_end as string | undefined,
@@ -104,7 +108,12 @@ export function MinhaAreaPage() {
     const subs = pedidosAtivos.map(p =>
       clienteService.subscribePedido(p.id, (row) => {
         setPedidos(cur => cur.map(existing =>
-          existing.id === row.id ? { ...existing, status: row.status as PedidoStatus, estimativaMinutos: row.estimativa_minutos as number | undefined } : existing
+          existing.id === row.id ? {
+            ...existing,
+            status: row.status as PedidoStatus,
+            statusPagamento: row.status_pagamento as Pedido['statusPagamento'],
+            estimativaMinutos: row.estimativa_minutos as number | undefined,
+          } : existing
         ));
       })
     );
@@ -179,7 +188,17 @@ export function MinhaAreaPage() {
                       {pedido.status.replace('_', ' ')}
                     </span>
                   </div>
-                  <StatusTracker pedido={pedido} />
+                  {pedido.formaPagamento === 'online' && pedido.statusPagamento !== 'pago' ? (
+                    <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3">
+                      <p className="text-sm font-black text-amber-800">Pagamento ainda não confirmado</p>
+                      <p className="mt-1 text-xs text-amber-700">O restaurante só receberá o pedido para preparo depois da confirmação.</p>
+                      {pedido.pagamentoUrl && (
+                        <a href={pedido.pagamentoUrl} className="mt-3 inline-flex rounded-xl bg-amber-600 px-4 py-2 text-xs font-black text-white">
+                          Continuar pagamento
+                        </a>
+                      )}
+                    </div>
+                  ) : <StatusTracker pedido={pedido} />}
                   {pedido.estimativaMinutos && (
                     <p className="mt-3 text-xs font-bold text-emerald-600">⏱ Previsão: ~{pedido.estimativaMinutos} min</p>
                   )}

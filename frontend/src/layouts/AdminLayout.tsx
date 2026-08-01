@@ -9,6 +9,7 @@ const navItems = [
   { to: '/admin/pedidos',       label: 'Pedidos',    exact: false, icon: '🛒' },
   { to: '/admin/produtos',      label: 'Produtos',   exact: false, icon: '🍔' },
   { to: '/admin/categorias',    label: 'Categorias', exact: false, icon: '📋' },
+  { to: '/admin/pagamentos',    label: 'Pagamentos', exact: false, icon: '💳' },
   { to: '/admin/configuracoes', label: 'Config.',    exact: false, icon: '⚙️' },
 ];
 
@@ -155,7 +156,7 @@ export function AdminLayout() {
       </main>
 
       {/* BOTTOM NAV MOBILE */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white shadow-[0_-8px_32px_rgba(15,23,42,0.10)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white shadow-[0_-8px_32px_rgba(15,23,42,0.10)] lg:hidden">
         {navItems.map((item) => (
           <Link key={item.to} to={item.to}
             activeOptions={item.exact ? { exact: true } : undefined}

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Pedido, PedidoItem, PedidoStatus, ModalidadeEntrega, FormaPagamento } from '../types/domain';
+import type { Pedido, PedidoItem, PedidoStatus, ModalidadeEntrega, FormaPagamento, StatusPagamento } from '../types/domain';
 
 function mapPedido(row: Record<string, unknown>): Pedido {
   return {
@@ -10,6 +10,10 @@ function mapPedido(row: Record<string, unknown>): Pedido {
     status: row.status as PedidoStatus,
     modalidade: row.modalidade as ModalidadeEntrega,
     formaPagamento: row.forma_pagamento as FormaPagamento | undefined,
+    statusPagamento: row.status_pagamento as StatusPagamento | undefined,
+    provedorPagamento: row.provedor_pagamento as string | undefined,
+    pagamentoUrl: row.pagamento_url as string | undefined,
+    pagoEm: row.pago_em as string | undefined,
     clienteNome: row.cliente_nome as string | undefined,
     clienteTel: row.cliente_tel as string | undefined,
     clienteEnd: row.cliente_end as string | undefined,
@@ -65,6 +69,7 @@ export const pedidosService = {
       .select('*')
       .eq('empresa_id', empresaId)
       .not('status', 'in', '("finalizado","cancelado")')
+      .or('forma_pagamento.neq.online,status_pagamento.eq.pago')
       .order('criado_em', { ascending: true });
 
     if (error) { console.error('[pedidosService.listar]', error.message); return []; }

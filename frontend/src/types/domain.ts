@@ -10,7 +10,8 @@ export type StatusLoja = 'automatico' | 'forcar_aberto' | 'forcar_fechado';
 export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom';
 export type EstiloVisual = 'moderno' | 'clean' | 'vibrante' | 'classico';
 export type ModalidadeEntrega = 'retirada' | 'entrega';
-export type FormaPagamento = 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito';
+export type FormaPagamento = 'online' | 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito';
+export type StatusPagamento = 'nao_aplicavel' | 'aguardando' | 'pago' | 'falhou' | 'cancelado' | 'estornado';
 
 export interface HorarioDia {
   ativo: boolean;
@@ -52,6 +53,15 @@ export interface ConfigEntrega {
   tempoPadraoMinutos?: number;
 }
 
+export interface ConfigPagamento {
+  onlineAntecipadoAtivo: boolean;
+  dinheiroNaHoraAtivo: boolean;
+  cartaoNaHoraAtivo: boolean;
+  pixNaHoraAtivo: boolean;
+  chavePix?: string;
+  nomeBeneficiarioPix?: string;
+}
+
 export interface Empresa {
   id: string;
   nome: string;
@@ -69,6 +79,7 @@ export interface Empresa {
   pedidoMinimo: number;
   horario: HorarioFuncionamento;
   entrega?: ConfigEntrega;
+  pagamentos?: ConfigPagamento;
 }
 
 export interface Categoria {
@@ -109,6 +120,10 @@ export interface Pedido {
   status: PedidoStatus;
   modalidade: ModalidadeEntrega;
   formaPagamento?: FormaPagamento;
+  statusPagamento?: StatusPagamento;
+  provedorPagamento?: string;
+  pagamentoUrl?: string;
+  pagoEm?: string;
   clienteNome?: string;
   clienteTel?: string;
   clienteEnd?: string;
