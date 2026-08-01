@@ -143,9 +143,18 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
         const ownerId = sessionData.session?.user.id;
         const defaultSlug = import.meta.env.VITE_DEFAULT_EMPRESA_SLUG as string | undefined;
         const defaultId = import.meta.env.VITE_DEFAULT_EMPRESA_ID as string | undefined;
+        const publicSlugMatch = window.location.pathname.match(/^\/cardapio\/([^/]+)\/?$/);
+        const publicSlug = publicSlugMatch ? decodeURIComponent(publicSlugMatch[1]) : null;
+        const checkoutPath = window.location.pathname.startsWith('/checkout') || window.location.pathname === '/minha-area';
+        const rememberedSlug = checkoutPath ? sessionStorage.getItem('menuexpress_tenant_slug') : null;
+        const requestedSlug = publicSlug ?? rememberedSlug;
+
+        if (publicSlug) sessionStorage.setItem('menuexpress_tenant_slug', publicSlug);
 
         let empresaQuery = supabase.from('empresas').select('*');
-        if (ownerId) {
+        if (requestedSlug) {
+          empresaQuery = empresaQuery.eq('slug', requestedSlug).eq('status', 'ativa');
+        } else if (ownerId) {
           empresaQuery = empresaQuery.eq('user_id', ownerId);
         } else if (defaultSlug) {
           empresaQuery = empresaQuery.eq('slug', defaultSlug).eq('status', 'ativa');
