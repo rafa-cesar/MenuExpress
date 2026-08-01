@@ -108,8 +108,7 @@ export function MenuPage() {
             <div className="flex items-center gap-3 sm:gap-4">
               <EmpresaAvatar logoUrl={empresaData.logoUrl} nome={empresaData.nome} />
               <div className="min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400 sm:text-[10px]">Menu autoral</p>
-                <span className={`mt-1 inline-flex items-center gap-1.5 text-[10px] font-black sm:text-xs ${storeStatus.aberta ? 'text-emerald-700' : 'text-red-600'}`}>
+                <span className={`inline-flex items-center gap-1.5 text-[10px] font-black sm:text-xs ${storeStatus.aberta ? 'text-emerald-700' : 'text-red-600'}`}>
                   <span className={`h-2 w-2 rounded-full ${storeStatus.aberta ? 'bg-emerald-500' : 'bg-red-500'}`} />
                   {storeStatus.aberta ? 'Aberta agora' : 'Fechada'}
                 </span>
@@ -164,8 +163,7 @@ export function MenuPage() {
         <div className="mt-5 sm:mt-7">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: brand.primary }}>Explore o cardápio</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{activeCategory ?? ''}</h2>
+              <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{activeCategory ?? ''}</h2>
             </div>
             <span className="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-sm">{filteredItems.length} produto(s)</span>
           </div>
