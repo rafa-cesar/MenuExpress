@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useMemo } from 'react';
 import type { CartItem } from '../types/menu';
 import type { ModalidadeEntrega, FormaPagamento } from '../types/domain';
+import { useMenuStore } from './MenuStoreContext';
 
 export interface CartContextValue {
   items: CartItem[];
@@ -21,11 +22,12 @@ export interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
-const CART_STORAGE_KEY = 'menuexpress:carrinho';
+const LEGACY_CART_STORAGE_KEY = 'menuexpress:carrinho';
+const cartStorageKey = (empresaId: string) => `menuexpress:carrinho:${empresaId}`;
 
-function carregarCarrinho(): CartItem[] {
+function carregarCarrinho(empresaId: string): CartItem[] {
   try {
-    const salvo = window.localStorage.getItem(CART_STORAGE_KEY);
+    const salvo = window.sessionStorage.getItem(cartStorageKey(empresaId));
     if (!salvo) return [];
     const itens = JSON.parse(salvo) as unknown;
     if (!Array.isArray(itens)) return [];
@@ -37,7 +39,8 @@ function carregarCarrinho(): CartItem[] {
         typeof candidato.product.id === 'string' &&
         typeof candidato.product.preco === 'number' &&
         Number.isInteger(candidato.quantity) &&
-        Number(candidato.quantity) > 0
+        Number(candidato.quantity) > 0 &&
+        candidato.product.empresaId === empresaId
       );
     });
   } catch {
@@ -46,19 +49,41 @@ function carregarCarrinho(): CartItem[] {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(carregarCarrinho);
+  const { empresa } = useMenuStore();
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [loadedEmpresaId, setLoadedEmpresaId] = useState<string | null>(null);
   const [modalidade, setModalidade] = useState<ModalidadeEntrega>('retirada');
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('pix');
   const [observacao, setObservacao] = useState('');
 
   useEffect(() => {
+    const empresaId = empresa?.id;
+    if (!empresaId) {
+      setItems([]);
+      setLoadedEmpresaId(null);
+      return;
+    }
+
+    setItems(carregarCarrinho(empresaId));
+    setLoadedEmpresaId(empresaId);
+    // Remove o carrinho global antigo que causava itens herdados entre lojas e sessões.
     try {
-      if (items.length) window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-      else window.localStorage.removeItem(CART_STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
+    } catch {
+      // O carrinho continua funcional mesmo sem acesso ao armazenamento.
+    }
+  }, [empresa?.id]);
+
+  useEffect(() => {
+    if (!loadedEmpresaId || loadedEmpresaId !== empresa?.id) return;
+    try {
+      const key = cartStorageKey(loadedEmpresaId);
+      if (items.length) window.sessionStorage.setItem(key, JSON.stringify(items));
+      else window.sessionStorage.removeItem(key);
     } catch {
       // O carrinho continua funcional mesmo se o navegador bloquear o armazenamento.
     }
-  }, [items]);
+  }, [items, loadedEmpresaId, empresa?.id]);
 
   const add = (product: import('../types/menu').MenuItem) =>
     setItems(cur =>
