@@ -1,11 +1,13 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { supabase } from '../../lib/supabase';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 export function AdminResetPasswordPage() {
   usePageTitle('Redefinir senha — MenuExpress');
-  const navigate = useNavigate();
+  const nextPath = new URLSearchParams(window.location.search).get('next') === '/checkout/auth'
+    ? '/checkout/auth'
+    : '/admin/login';
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [checkingLink, setCheckingLink] = useState(true);
@@ -56,7 +58,7 @@ export function AdminResetPasswordPage() {
     }
 
     await supabase.auth.signOut();
-    navigate({ to: '/admin/login', replace: true });
+    window.location.replace(nextPath);
   }
 
   return (
@@ -76,12 +78,12 @@ export function AdminResetPasswordPage() {
               <p className="rounded-xl bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">
                 Este link é inválido ou expirou.
               </p>
-              <Link
-                to="/admin/esqueci-senha"
+              <a
+                href={`/admin/esqueci-senha?next=${encodeURIComponent(nextPath)}`}
                 className="mt-5 block text-center text-sm font-bold text-brand-400 hover:text-brand-300"
               >
                 Solicitar um novo link
-              </Link>
+              </a>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
