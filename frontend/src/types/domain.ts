@@ -63,6 +63,7 @@ export interface Empresa {
   status: EmpresaStatus;
   corPrincipal: string;
   logoUrl?: string;
+  capaUrl?: string;
   estiloVisual?: EstiloVisual;
   taxaEntrega: number;
   pedidoMinimo: number;
