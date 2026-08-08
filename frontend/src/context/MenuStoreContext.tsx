@@ -117,6 +117,7 @@ function mapProduto(row: Record<string, unknown>): MenuItem {
     imagem: (row.imagem as string) ?? '',
     destaque: Boolean(row.destaque),
     disponivel: Boolean(row.disponivel),
+    antecedenciaMinutos: Number(row.antecedencia_minutos ?? 0),
   };
 }
 
@@ -181,7 +182,7 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
 
         const [{ data: categoriasData }, { data: produtosData }] = await Promise.all([
           supabase.from('categorias').select('id,empresa_id,nome,slug,ordem,ativa').eq('empresa_id', empresaId).order('ordem'),
-          supabase.from('produtos').select('id,empresa_id,categoria_id,nome,descricao,preco,categoria,imagem,destaque,disponivel').eq('empresa_id', empresaId).order('criado_em'),
+          supabase.from('produtos').select('id,empresa_id,categoria_id,nome,descricao,preco,categoria,imagem,destaque,disponivel,antecedencia_minutos').eq('empresa_id', empresaId).order('criado_em'),
         ]);
 
         setEmpresa(mapEmpresa(empresaData as Record<string, unknown>));

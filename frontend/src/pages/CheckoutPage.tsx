@@ -40,6 +40,14 @@ export function CheckoutPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [pedidoFeito, setPedidoFeito] = useState<Pedido | null>(null);
+  const antecedenciaMinutos = Math.max(0, ...items.map((item) => item.product.antecedenciaMinutos ?? 0));
+  const pedidoAgendado = antecedenciaMinutos > 0;
+  const primeiroHorario = useMemo(() => new Date(Date.now() + antecedenciaMinutos * 60_000), [antecedenciaMinutos]);
+  const toLocalInput = (date: Date) => {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 16);
+  };
+  const [agendadoPara, setAgendadoPara] = useState('');
   const [clienteEnd, setClienteEnd] = useState(
     perfil?.endereco ? `${perfil.endereco.rua}, ${perfil.endereco.numero} — ${perfil.endereco.bairro}` : ''
   );
@@ -168,6 +176,13 @@ export function CheckoutPage() {
       setErro(`O pedido mínimo para entrega é ${fmt.format(minimoEntrega)}.`);
       return;
     }
+    if (pedidoAgendado) {
+      const escolhido = new Date(agendadoPara);
+      if (!agendadoPara || Number.isNaN(escolhido.getTime()) || escolhido.getTime() < primeiroHorario.getTime()) {
+        setErro(`Escolha uma data e um horário com pelo menos ${antecedenciaMinutos / 60} horas de antecedência.`);
+        return;
+      }
+    }
     setSalvando(true); setErro('');
     const pedido = await pedidosService.criar(empresa.id, {
       modalidade,
@@ -178,6 +193,7 @@ export function CheckoutPage() {
       clienteId: perfil.id,
       itens: items.map(i => ({ produtoId: i.product.id, quantidade: i.quantity })),
       observacao,
+      agendadoPara: pedidoAgendado ? new Date(agendadoPara).toISOString() : undefined,
     });
     if (!pedido) { setSalvando(false); setErro('Erro ao registrar pedido. Tente novamente.'); return; }
     if (formaPagamento === 'online') {
@@ -248,6 +264,28 @@ export function CheckoutPage() {
             <div className="flex justify-between font-black text-slate-950"><span>Total</span><span style={{ color: brand.primary }}>{fmt.format(total)}</span></div>
           </div>
         </div>
+
+        {/* Forma de pagamento */}
+        {pedidoAgendado && (
+          <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <h2 className="text-sm font-black uppercase tracking-wide text-amber-800">Pedido com agendamento</h2>
+            <p className="mt-2 text-sm leading-6 text-amber-700">
+              Este pedido precisa ser solicitado com pelo menos {antecedenciaMinutos / 60} horas de antecedência.
+            </p>
+            <label className="mt-4 block text-sm font-bold text-slate-700">
+              Quando deseja receber ou retirar?
+              <input
+                type="datetime-local"
+                required
+                min={toLocalInput(primeiroHorario)}
+                value={agendadoPara}
+                onChange={(event) => setAgendadoPara(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 outline-none focus:border-amber-500"
+              />
+            </label>
+            <p className="mt-2 text-xs text-amber-700">Primeiro horário possível: {primeiroHorario.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.</p>
+          </div>
+        )}
 
         {/* Forma de pagamento */}
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-5">

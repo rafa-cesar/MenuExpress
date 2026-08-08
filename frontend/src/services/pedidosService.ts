@@ -25,6 +25,7 @@ function mapPedido(row: Record<string, unknown>): Pedido {
     total: Number(row.total),
     estimativaMinutos: row.estimativa_minutos as number | undefined,
     previsaoEm: row.previsao_em as string | undefined,
+    agendadoPara: row.agendado_para as string | undefined,
     criadoEm: row.criado_em as string,
     atualizadoEm: row.atualizado_em as string,
   };
@@ -40,6 +41,7 @@ export const pedidosService = {
     clienteId?: string;
     itens: Array<{ produtoId: string; quantidade: number }>;
     observacao: string;
+    agendadoPara?: string;
   }): Promise<Pedido | null> {
     const { data, error } = await supabase.rpc('criar_pedido_seguro', {
       p_empresa_id: empresaId,
@@ -51,6 +53,7 @@ export const pedidosService = {
       p_cliente_id: pedido.clienteId ?? null,
       p_itens: pedido.itens,
       p_observacao: pedido.observacao || null,
+      p_agendado_para: pedido.agendadoPara ?? null,
     });
 
     if (error) {

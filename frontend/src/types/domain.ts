@@ -102,6 +102,7 @@ export interface Produto {
   imagem: string;
   destaque: boolean;
   disponivel: boolean;
+  antecedenciaMinutos: number;
 }
 
 export interface PedidoItem {
@@ -135,6 +136,7 @@ export interface Pedido {
   total: number;
   estimativaMinutos?: number;
   previsaoEm?: string;
+  agendadoPara?: string;
   criadoEm: string;
   atualizadoEm: string;
 }
