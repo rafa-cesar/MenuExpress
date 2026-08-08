@@ -27,6 +27,7 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const isMenuPreview = pathname === '/admin/cardapio';
   const publicMenuUrl = empresa?.slug
     ? `${window.location.origin}/cardapio/${encodeURIComponent(empresa.slug)}`
@@ -41,10 +42,15 @@ export function AdminLayout() {
     navigate({ to: '/admin/login' });
   }
 
-  function shareOnWhatsApp() {
+  async function copyPublicMenuLink() {
     if (!publicMenuUrl) return;
-    const message = `Veja o cardápio de ${empresa?.nome ?? 'nossa loja'}: ${publicMenuUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    try {
+      await navigator.clipboard.writeText(publicMenuUrl);
+      setLinkCopiado(true);
+      window.setTimeout(() => setLinkCopiado(false), 2500);
+    } catch {
+      window.prompt('Copie o link do cardápio:', publicMenuUrl);
+    }
   }
 
   if (loading) {
@@ -92,9 +98,9 @@ export function AdminLayout() {
               className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:border-brand-300 hover:text-brand-600">
               {isMenuPreview ? '← Voltar ao painel' : 'Ver cardápio'}
             </Link>
-            <button type="button" onClick={shareOnWhatsApp} disabled={!publicMenuUrl}
+            <button type="button" onClick={() => void copyPublicMenuLink()} disabled={!publicMenuUrl}
               className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600 disabled:opacity-50">
-              Compartilhar
+              {linkCopiado ? '✓ Link copiado' : 'Copiar link'}
             </button>
             <div className="h-5 w-px bg-slate-200" />
             <p className="max-w-[160px] truncate text-xs text-slate-400">{session.user.email}</p>
@@ -135,9 +141,9 @@ export function AdminLayout() {
                 </Link>
               ))}
             </nav>
-            <button type="button" onClick={shareOnWhatsApp} disabled={!publicMenuUrl}
+            <button type="button" onClick={() => void copyPublicMenuLink()} disabled={!publicMenuUrl}
               className="mt-3 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
-              Compartilhar cardápio no WhatsApp
+              {linkCopiado ? '✓ Link copiado' : 'Copiar link do cardápio'}
             </button>
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
               <p className="truncate text-xs text-slate-400">{session.user.email}</p>
