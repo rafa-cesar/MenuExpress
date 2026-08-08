@@ -29,6 +29,15 @@ Deno.serve(async (req) => {
       .select('token_acesso').eq('empresa_id', pedido.empresa_id).eq('ativo', true).maybeSingle();
     if (!integracao) return json({ error: 'Este restaurante ainda não ativou o pagamento online' }, 409);
 
+    const now = new Date();
+    const existingExpiration = pedido.pagamento_expira_em ? new Date(pedido.pagamento_expira_em) : null;
+    if (existingExpiration && existingExpiration <= now) {
+      await admin.from('pedidos').update({ status: 'cancelado', status_pagamento: 'expirado' })
+        .eq('id', pedido.id).eq('status_pagamento', 'aguardando');
+      return json({ error: 'O prazo deste pedido terminou. Faça um novo pedido.' }, 409);
+    }
+    const expiresAt = existingExpiration ?? new Date(now.getTime() + 15 * 60_000);
+
     const appUrl = requiredEnv('APP_URL');
     const webhookUrl = new URL(requiredEnv('MP_WEBHOOK_URL'));
     webhookUrl.searchParams.set('empresa_id', pedido.empresa_id);
@@ -53,6 +62,12 @@ Deno.serve(async (req) => {
         failure: `${appUrl}/checkout/resumo?pedido=${pedido.id}&pagamento=falhou`,
       },
       auto_return: 'approved',
+      expires: true,
+      expiration_date_from: now.toISOString(),
+      expiration_date_to: expiresAt.toISOString(),
+      payment_methods: {
+        excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+      },
       statement_descriptor: 'MENU PEDIDO',
     };
 
@@ -70,8 +85,11 @@ Deno.serve(async (req) => {
       console.error('Checkout Mercado Pago:', mp);
       return json({ error: 'Não foi possível abrir o pagamento' }, 502);
     }
-    await admin.from('pedidos').update({ pagamento_url: mp.init_point }).eq('id', pedido.id);
-    return json({ url: mp.init_point });
+    await admin.from('pedidos').update({
+      pagamento_url: mp.init_point,
+      pagamento_expira_em: expiresAt.toISOString(),
+    }).eq('id', pedido.id).eq('status_pagamento', 'aguardando');
+    return json({ url: mp.init_point, expiraEm: expiresAt.toISOString() });
   } catch (error) {
     console.error(error);
     return json({ error: 'Falha ao iniciar pagamento' }, 500);

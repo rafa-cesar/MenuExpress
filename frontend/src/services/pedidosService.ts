@@ -13,6 +13,7 @@ function mapPedido(row: Record<string, unknown>): Pedido {
     statusPagamento: row.status_pagamento as StatusPagamento | undefined,
     provedorPagamento: row.provedor_pagamento as string | undefined,
     pagamentoUrl: row.pagamento_url as string | undefined,
+    pagamentoExpiraEm: row.pagamento_expira_em as string | undefined,
     pagoEm: row.pago_em as string | undefined,
     clienteNome: row.cliente_nome as string | undefined,
     clienteTel: row.cliente_tel as string | undefined,

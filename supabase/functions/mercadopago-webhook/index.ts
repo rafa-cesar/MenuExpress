@@ -53,10 +53,41 @@ Deno.serve(async (req) => {
     const payment = await mpResponse.json();
     if (!mpResponse.ok || !payment.external_reference) return new Response('ok');
 
-    const { data: pedido } = await admin.from('pedidos').select('id,empresa_id,total')
+    const { data: pedido } = await admin.from('pedidos')
+      .select('id,empresa_id,total,status,status_pagamento,pagamento_expira_em')
       .eq('id', payment.external_reference).eq('empresa_id', empresaId).maybeSingle();
     if (!pedido || Number(payment.transaction_amount) !== Number(pedido.total)) {
       console.error('Pagamento não corresponde ao pedido', { paymentId, empresaId });
+      return new Response('ok');
+    }
+
+    const approvedAt = payment.date_approved ? new Date(payment.date_approved) : new Date();
+    const expiredAt = pedido.pagamento_expira_em ? new Date(pedido.pagamento_expira_em) : null;
+    const lateApproval = payment.status === 'approved' && (expiredAt
+      ? approvedAt > expiredAt
+      : pedido.status === 'cancelado' || pedido.status_pagamento === 'expirado');
+
+    if (lateApproval) {
+      const refundResponse = await fetch(
+        `https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}/refunds`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${integracao.token_acesso}`,
+            'Content-Type': 'application/json',
+            'X-Idempotency-Key': `menu-express-estorno-${paymentId}`,
+          },
+          body: '{}',
+        },
+      );
+      const refundStatus = refundResponse.ok ? 'estornado' : 'estorno_pendente';
+      if (!refundResponse.ok) console.error('Estorno automático pendente', { paymentId, empresaId });
+      await admin.from('pedidos').update({
+        status: 'cancelado',
+        status_pagamento: refundStatus,
+        pagamento_externo_id: paymentId,
+        pago_em: payment.date_approved ?? new Date().toISOString(),
+      }).eq('id', pedido.id).eq('empresa_id', empresaId);
       return new Response('ok');
     }
 
@@ -65,6 +96,7 @@ Deno.serve(async (req) => {
       : payment.status === 'cancelled' || payment.status === 'rejected' ? 'falhou'
       : 'aguardando';
     await admin.from('pedidos').update({
+      ...(status === 'pago' && pedido.status === 'cancelado' ? { status: 'aguardando' } : {}),
       status_pagamento: status,
       pagamento_externo_id: paymentId,
       pago_em: status === 'pago' ? (payment.date_approved ?? new Date().toISOString()) : null,
