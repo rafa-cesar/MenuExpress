@@ -148,11 +148,12 @@ begin
   if jsonb_typeof(p_itens) <> 'array' or jsonb_array_length(p_itens) = 0
      or jsonb_array_length(p_itens) > 50 then raise exception 'Carrinho inválido'; end if;
 
-  if p_cliente_id is not null then
-    select * into v_cliente from public.clientes where id = p_cliente_id;
-    if not found or v_cliente.empresa_id <> p_empresa_id
-       or v_cliente.auth_id is distinct from auth.uid() then raise exception 'Cliente inválido'; end if;
+  if auth.uid() is null or p_cliente_id is null then
+    raise exception 'Cliente autenticado obrigatório';
   end if;
+  select * into v_cliente from public.clientes where id = p_cliente_id;
+  if not found or v_cliente.empresa_id <> p_empresa_id
+     or v_cliente.auth_id is distinct from auth.uid() then raise exception 'Cliente inválido'; end if;
 
   with requested as (
     select (item->>'produtoId')::uuid as produto_id,

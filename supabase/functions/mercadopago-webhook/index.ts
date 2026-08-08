@@ -7,6 +7,8 @@ async function validSignature(req: Request, paymentId: string): Promise<boolean>
   const requestId = req.headers.get('x-request-id') ?? '';
   const parts = Object.fromEntries(signature.split(',').map((p) => p.trim().split('=')));
   if (!parts.ts || !parts.v1 || !requestId) return false;
+  const timestamp = Number(parts.ts);
+  if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > 5 * 60_000) return false;
   const manifest = `id:${paymentId};request-id:${requestId};ts:${parts.ts};`;
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -20,24 +22,14 @@ async function validSignature(req: Request, paymentId: string): Promise<boolean>
   return difference === 0;
 }
 
-function validWebhookToken(url: URL): boolean {
-  const expected = requiredEnv('MP_WEBHOOK_SECRET');
-  const provided = url.searchParams.get('hook_token') ?? '';
-  if (expected.length !== provided.length) return false;
-  let difference = 0;
-  for (let i = 0; i < expected.length; i += 1) {
-    difference |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
-  }
-  return difference === 0;
-}
-
 Deno.serve(async (req) => {
   try {
+    if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
     const url = new URL(req.url);
     const empresaId = url.searchParams.get('empresa_id');
-    const payload = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const payload = await req.json().catch(() => ({}));
     const paymentId = String(payload?.data?.id ?? url.searchParams.get('data.id') ?? '');
-    const authenticated = validWebhookToken(url) || await validSignature(req, paymentId);
+    const authenticated = await validSignature(req, paymentId);
     if (!empresaId || !paymentId || !authenticated) {
       return new Response('invalid', { status: 401 });
     }
