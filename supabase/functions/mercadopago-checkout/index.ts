@@ -2,7 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, json, requiredEnv } from '../_shared/http.ts';
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) });
+  if (req.method !== 'POST') return json({ error: 'Método não permitido' }, 405);
   try {
     const authorization = req.headers.get('Authorization');
     if (!authorization) return json({ error: 'Não autenticado' }, 401);
@@ -40,6 +41,7 @@ Deno.serve(async (req) => {
 
     const appUrl = requiredEnv('APP_URL');
     const webhookUrl = new URL(requiredEnv('MP_WEBHOOK_URL'));
+    webhookUrl.searchParams.delete('hook_token');
     webhookUrl.searchParams.set('empresa_id', pedido.empresa_id);
     const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
     const preference = {

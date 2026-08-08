@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     });
     const token = await response.json();
     if (!response.ok || !token.access_token || !token.user_id) {
-      console.error('OAuth Mercado Pago:', token);
+      console.error('OAuth Mercado Pago recusado', { status: response.status });
       return redirect('erro');
     }
 

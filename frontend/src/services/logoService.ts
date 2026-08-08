@@ -1,6 +1,18 @@
 import { supabase } from '../lib/supabase';
 
 const BUCKET = 'logos';
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+};
+
+function validateImage(file: File): string {
+  const ext = IMAGE_EXTENSIONS[file.type];
+  if (!ext) throw new Error('Formato inválido. Envie PNG, JPG ou WEBP.');
+  if (file.size > 2 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 2 MB.');
+  return ext;
+}
 
 export const logoService = {
   /**
@@ -9,14 +21,14 @@ export const logoService = {
    * e retorna a URL pública permanente.
    */
   async upload(empresaId: string, file: File): Promise<string> {
-    const ext = file.name.split('.').pop() ?? 'png';
-    const path = `${empresaId}/${Date.now()}.${ext}`;
+    const ext = validateImage(file);
+    const path = `${empresaId}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
       .upload(path, file, {
-        contentType: file.type || 'image/png',
-        upsert: true,
+        contentType: file.type,
+        upsert: false,
       });
 
     if (uploadError) throw new Error(uploadError.message);

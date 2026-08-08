@@ -158,7 +158,9 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
 
         if (publicSlug) sessionStorage.setItem('menuexpress_tenant_slug', publicSlug);
 
-        let empresaQuery = supabase.from('empresas').select('*');
+        let empresaQuery = supabase.from('empresas').select(
+          'id,nome,slug,status,descricao,cidade,instagram,whatsapp,cor_principal,estilo_visual,taxa_entrega,pedido_minimo,logo_url,capa_url,horario_status,horario_mensagem_cliente,horario_dias,entrega,pagamentos'
+        );
         if (requestedSlug) {
           empresaQuery = empresaQuery.eq('slug', requestedSlug).eq('status', 'ativa');
         } else if (ownerId) {
@@ -178,8 +180,8 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
         const empresaId = empresaData.id as string;
 
         const [{ data: categoriasData }, { data: produtosData }] = await Promise.all([
-          supabase.from('categorias').select('*').eq('empresa_id', empresaId).order('ordem'),
-          supabase.from('produtos').select('*').eq('empresa_id', empresaId).order('criado_em'),
+          supabase.from('categorias').select('id,empresa_id,nome,slug,ordem,ativa').eq('empresa_id', empresaId).order('ordem'),
+          supabase.from('produtos').select('id,empresa_id,categoria_id,nome,descricao,preco,categoria,imagem,destaque,disponivel').eq('empresa_id', empresaId).order('criado_em'),
         ]);
 
         setEmpresa(mapEmpresa(empresaData as Record<string, unknown>));

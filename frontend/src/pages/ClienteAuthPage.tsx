@@ -80,7 +80,7 @@ export function ClienteAuthPage() {
   async function handleCadastro(e: React.FormEvent) {
     e.preventDefault();
     setErroForm('');
-    if (!email.trim() || senha.length < 6) { setErroForm('Informe um e-mail válido e senha com no mínimo 6 caracteres.'); return; }
+    if (!email.trim() || senha.length < 8) { setErroForm('Informe um e-mail válido e senha com no mínimo 8 caracteres.'); return; }
     setEnviando(true);
     try {
       await cadastrarComEmail(email.trim(), senha);
@@ -184,7 +184,7 @@ export function ClienteAuthPage() {
               <form onSubmit={handleCadastro} className="mt-6 space-y-3">
                 <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Seu e-mail"
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" />
-                <input value={senha} onChange={e => setSenha(e.target.value)} type="password" placeholder="Crie uma senha (mín. 6 caracteres)"
+                <input value={senha} onChange={e => setSenha(e.target.value)} type="password" placeholder="Crie uma senha (mín. 8 caracteres)"
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400" />
                 {erroForm && <p className="text-xs font-bold text-red-500">{erroForm}</p>}
                 <button type="submit" disabled={enviando} className="w-full rounded-2xl py-3.5 text-sm font-black text-white disabled:opacity-50" style={btnStyle}>

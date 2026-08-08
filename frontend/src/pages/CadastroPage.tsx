@@ -23,7 +23,7 @@ export function CadastroPage() {
   async function handleConta(e: FormEvent) {
     e.preventDefault();
     setError('');
-    if (senha.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return; }
+    if (senha.length < 8) { setError('A senha deve ter pelo menos 8 caracteres.'); return; }
     if (senha !== confirmar) { setError('As senhas não coincidem.'); return; }
     setStep('loja');
   }
@@ -119,7 +119,7 @@ export function CadastroPage() {
               <label className="block">
                 <span className="text-sm font-bold text-slate-700">Senha</span>
                 <input type="password" required value={senha} onChange={(e) => setSenha(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
               </label>
 
