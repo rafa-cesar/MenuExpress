@@ -35,6 +35,8 @@ const minhaAreaRoute   = createRoute({ getParentRoute: () => rootRoute, path: '/
 const adminLoginRoute  = createRoute({ getParentRoute: () => rootRoute, path: '/admin/login',      component: AdminLoginPage });
 const adminForgotPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/esqueci-senha', component: AdminForgotPasswordPage });
 const adminResetPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/admin/redefinir-senha', component: AdminResetPasswordPage });
+const clientForgotPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cliente/esqueci-senha', component: AdminForgotPasswordPage });
+const clientResetPasswordRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cliente/redefinir-senha', component: AdminResetPasswordPage });
 
 const adminRoute            = createRoute({ getParentRoute: () => rootRoute, path: '/admin', component: AdminLayout });
 const adminDashboardRoute   = createRoute({ getParentRoute: () => adminRoute, path: '/',              component: AdminDashboardPage });
@@ -59,6 +61,8 @@ const routeTree = rootRoute.addChildren([
   adminLoginRoute,
   adminForgotPasswordRoute,
   adminResetPasswordRoute,
+  clientForgotPasswordRoute,
+  clientResetPasswordRoute,
   adminRoute.addChildren([
     adminDashboardRoute,
     adminOrdersRoute,

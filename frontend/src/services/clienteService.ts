@@ -16,11 +16,12 @@ function mapCliente(row: Record<string, unknown>): ClientePerfil {
 }
 
 export const clienteService = {
-  async buscarPorAuthId(authId: string): Promise<ClientePerfil | null> {
+  async buscarPorAuthId(authId: string, empresaId: string): Promise<ClientePerfil | null> {
     const { data, error } = await supabase
       .from('clientes')
       .select('*')
       .eq('auth_id', authId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
     if (error) { console.error('[clienteService.buscarPorAuthId]', error.message); return null; }
     if (!data) return null;

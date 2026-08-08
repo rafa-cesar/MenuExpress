@@ -154,7 +154,8 @@ export function MenuStoreProvider({ children }: { children: ReactNode }) {
         const publicSlugMatch = window.location.pathname.match(/^\/cardapio\/([^/]+)\/?$/);
         const publicSlug = publicSlugMatch ? decodeURIComponent(publicSlugMatch[1]) : null;
         const checkoutPath = window.location.pathname.startsWith('/checkout') || window.location.pathname === '/minha-area';
-        const rememberedSlug = checkoutPath ? sessionStorage.getItem('menuexpress_tenant_slug') : null;
+        const genericMenuPath = window.location.pathname === '/cardapio';
+        const rememberedSlug = (checkoutPath || genericMenuPath) ? sessionStorage.getItem('menuexpress_tenant_slug') : null;
         const requestedSlug = publicSlug ?? rememberedSlug;
 
         if (publicSlug) sessionStorage.setItem('menuexpress_tenant_slug', publicSlug);

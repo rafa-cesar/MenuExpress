@@ -7,5 +7,5 @@ export const tenantMenuRouteExamples = [
 ];
 
 export function buildTenantMenuPath(empresaSlug: string) {
-  return `/${empresaSlug}/cardapio`;
+  return `/cardapio/${encodeURIComponent(empresaSlug)}`;
 }

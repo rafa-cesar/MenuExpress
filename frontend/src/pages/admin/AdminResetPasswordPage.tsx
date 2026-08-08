@@ -8,6 +8,7 @@ export function AdminResetPasswordPage() {
   const nextPath = new URLSearchParams(window.location.search).get('next') === '/checkout/auth'
     ? '/checkout/auth'
     : '/admin/login';
+  const isClient = window.location.pathname.startsWith('/cliente/');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [checkingLink, setCheckingLink] = useState(true);
@@ -80,7 +81,7 @@ export function AdminResetPasswordPage() {
                 Este link é inválido ou expirou.
               </p>
               <a
-                href={`/admin/esqueci-senha?next=${encodeURIComponent(nextPath)}`}
+                href={`/${isClient ? 'cliente' : 'admin'}/esqueci-senha?next=${encodeURIComponent(nextPath)}`}
                 className="mt-5 block text-center text-sm font-bold text-brand-400 hover:text-brand-300"
               >
                 Solicitar um novo link

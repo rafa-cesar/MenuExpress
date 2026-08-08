@@ -117,6 +117,7 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
   const proximo  = proximoStatus(pedido);
   const btnLabel = btnAvancarLabel(pedido);
   const urgente  = pedido.status === 'aguardando' && minutosDesde(pedido.criadoEm) >= 15;
+  const agendamentoFuturo = Boolean(pedido.agendadoPara && new Date(pedido.agendadoPara).getTime() > Date.now());
   const whatsappUrl = pedido.clienteTel
     ? `https://wa.me/55${pedido.clienteTel.replace(/\D/g, '')}?text=${encodeURIComponent(buildWhatsAppMsg(pedido))}`
     : null;
@@ -151,6 +152,13 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
           </div>
         )}
 
+        {pedido.agendadoPara && (
+          <div className="mx-4 mt-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500">Pedido agendado</p>
+            <p className="text-sm font-black text-violet-800">{new Date(pedido.agendadoPara).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+          </div>
+        )}
+
         <div className="mt-3 px-4">
           {pedido.clienteNome && <p className="font-bold text-slate-900">{pedido.clienteNome}</p>}
           {pedido.clienteTel  && <p className="text-xs text-slate-400">{pedido.clienteTel}</p>}
@@ -180,8 +188,9 @@ function PedidoCard({ pedido, tempoPadrao, onAvancar, onCancelar }: {
           {proximo && btnLabel && (
             <button type="button"
               onClick={() => pedido.status === 'aguardando' ? setShowModal(true) : onAvancar()}
-              className="flex-1 rounded-xl bg-slate-950 px-3 py-2.5 text-xs font-black text-white transition hover:bg-slate-800">
-              {btnLabel}
+              disabled={agendamentoFuturo}
+              className="flex-1 rounded-xl bg-slate-950 px-3 py-2.5 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-violet-200 disabled:text-violet-700">
+              {agendamentoFuturo ? 'Aguardar horário agendado' : btnLabel}
             </button>
           )}
           {whatsappUrl && (

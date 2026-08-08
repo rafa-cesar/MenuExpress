@@ -8,6 +8,7 @@ export function AdminForgotPasswordPage() {
   const nextPath = new URLSearchParams(window.location.search).get('next') === '/checkout/auth'
     ? '/checkout/auth'
     : '/admin/login';
+  const isClient = window.location.pathname.startsWith('/cliente/');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -19,7 +20,7 @@ export function AdminForgotPasswordPage() {
     setLoading(true);
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/admin/redefinir-senha?next=${encodeURIComponent(nextPath)}`,
+      redirectTo: `${window.location.origin}/${isClient ? 'cliente' : 'admin'}/redefinir-senha?next=${encodeURIComponent(nextPath)}`,
     });
 
     setLoading(false);

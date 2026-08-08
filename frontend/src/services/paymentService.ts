@@ -10,6 +10,12 @@ export interface PaymentConnectionStatus {
 }
 
 export const paymentService = {
+  async disponivel(empresaId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('pagamento_online_disponivel', { p_empresa_id: empresaId });
+    if (error) return false;
+    return data === true;
+  },
+
   async status(): Promise<PaymentConnectionStatus | null> {
     const { data, error } = await supabase.rpc('status_integracao_pagamento');
     if (error) throw error;

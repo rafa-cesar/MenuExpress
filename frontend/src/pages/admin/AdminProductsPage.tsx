@@ -1,9 +1,10 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useMemo, useRef, useState } from 'react';
 import { AdminSectionHeader } from '../../components/admin/AdminSectionHeader';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useMenuStore } from '../../context/MenuStoreContext';
 import type { MenuCategory, MenuItem } from '../../types/menu';
 import { supabase } from '../../lib/supabase';
+import { productImageService } from '../../services/productImageService';
 
 type ProductFormState = {
   nome: string;
@@ -37,6 +38,23 @@ export function AdminProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [enviandoImagem, setEnviandoImagem] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  async function uploadImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !empresa) return;
+    setEnviandoImagem(true); setErro(null);
+    try {
+      const url = await productImageService.upload(empresa.id, file);
+      setForm((current) => ({ ...current, imagem: url }));
+    } catch (cause) {
+      setErro(cause instanceof Error ? cause.message : 'Não foi possível enviar a imagem.');
+    } finally {
+      setEnviandoImagem(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  }
 
   const categoriasNomes = categorias.map((c) => c.nome);
 
@@ -358,6 +376,13 @@ export function AdminProductsPage() {
                   className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"
                 />
               </label>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={enviandoImagem} onClick={() => imageInputRef.current?.click()} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-50">
+                  {enviandoImagem ? 'Enviando imagem...' : 'Enviar imagem segura'}
+                </button>
+                <span className="text-xs text-slate-500">PNG, JPEG ou WebP · até 2 MB</span>
+                <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={uploadImage} />
+              </div>
               <label className="block text-sm font-bold text-slate-700">
                 Antecedência mínima (horas)
                 <input
