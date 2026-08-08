@@ -13,6 +13,7 @@ export interface CartContextValue {
   dec: (id: string) => void;
   rem: (id: string) => void;
   clear: () => void;
+  replaceWith: (item: import('../types/menu').MenuItem) => void;
   setModalidade: (m: ModalidadeEntrega) => void;
   setFormaPagamento: (f: FormaPagamento) => void;
   setObservacao: (o: string) => void;
@@ -95,6 +96,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const dec = (id: string) => setItems(cur => cur.map(i => i.product.id === id ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0));
   const rem = (id: string) => setItems(cur => cur.filter(i => i.product.id !== id));
   const clear = () => { setItems([]); setObservacao(''); };
+  const replaceWith = (product: import('../types/menu').MenuItem) => setItems([{ product, quantity: 1 }]);
   const qty = (id: string) => items.find(i => i.product.id === id)?.quantity ?? 0;
 
   const subtotal = useMemo(() => items.reduce((t, i) => t + i.product.preco * i.quantity, 0), [items]);
@@ -102,7 +104,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartContextValue>(() => ({
     items, modalidade, formaPagamento, observacao,
-    add, inc, dec, rem, clear, setModalidade, setFormaPagamento, setObservacao,
+    add, inc, dec, rem, clear, replaceWith, setModalidade, setFormaPagamento, setObservacao,
     qty, subtotal, totalItems,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [items, modalidade, formaPagamento, observacao, subtotal, totalItems]);

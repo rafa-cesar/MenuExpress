@@ -41,13 +41,24 @@ export function MenuPage() {
   usePageTitle('Cardápio');
   const { empresa, produtos, categorias, loading, erro } = useMenuStore();
   const storeStatus = useStoreStatus();
-  const { add, dec, qty, items, subtotal, totalItems } = useCart();
+  const { add, dec, qty, items, subtotal, totalItems, replaceWith } = useCart();
   const { user, perfil, loading: authLoading, logout } = useClienteAuth();
   const navigate = useNavigate();
   const isAdminPreview = window.location.pathname.startsWith('/admin');
 
   const menuCategories = categorias.map(c => c.nome) as MenuCategory[];
   const [selectedCategory, setSelectedCategory] = useState<MenuCategory | null>(null);
+  const [produtoConflitante, setProdutoConflitante] = useState<MenuItem | null>(null);
+
+  function adicionarProduto(product: MenuItem) {
+    const novoAgendado = product.antecedenciaMinutos > 0;
+    const carrinhoAgendado = items[0]?.product.antecedenciaMinutos > 0;
+    if (items.length > 0 && novoAgendado !== carrinhoAgendado) {
+      setProdutoConflitante(product);
+      return;
+    }
+    add(product);
+  }
 
   const brand = useBrand(empresa?.corPrincipal ?? '#f97316', empresa?.estiloVisual ?? 'moderno');
   const cfg = empresa?.entrega;
@@ -223,8 +234,8 @@ export function MenuPage() {
           <div className="grid gap-3 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
             {filteredItems.map(item => (
               <MenuCard key={item.id} item={item} quantity={qty(item.id)}
-                onAdd={storeStatus.aberta ? (p: MenuItem) => add(p) : () => {}}
-                onIncrement={id => { const i = items.find(x => x.product.id === id); if (i) add(i.product); }}
+                onAdd={storeStatus.aberta ? adicionarProduto : () => {}}
+                onIncrement={id => { const i = items.find(x => x.product.id === id); if (i) adicionarProduto(i.product); }}
                 onDecrement={id => dec(id)}
                 disabled={!storeStatus.aberta}
                 accentColor={brand.primary}
@@ -251,6 +262,29 @@ export function MenuPage() {
       <div className="px-4 pb-6 pt-10 text-center">
         <p className="text-xs text-slate-400">Cardápio digital por <strong className="text-slate-500">YellowTech</strong></p>
       </div>
+
+      {produtoConflitante ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="cart-conflict-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 id="cart-conflict-title" className="text-xl font-black text-slate-950">Produtos com prazos diferentes</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              {produtoConflitante.antecedenciaMinutos > 0
+                ? `${produtoConflitante.nome} exige agendamento com ${produtoConflitante.antecedenciaMinutos / 60} horas de antecedência e não pode ser misturado com itens de entrega imediata.`
+                : `${produtoConflitante.nome} é um item de entrega imediata e não pode ser misturado com produtos agendados.`}
+            </p>
+            <p className="mt-3 text-sm font-bold text-slate-800">Você pode finalizar o carrinho atual ou substituí-lo por este produto.</p>
+            <div className="mt-6 space-y-3">
+              <button type="button" onClick={() => { replaceWith(produtoConflitante); setProdutoConflitante(null); }} className="w-full rounded-full bg-slate-950 px-5 py-3 font-black text-white">
+                Substituir carrinho
+              </button>
+              <button type="button" onClick={() => { setProdutoConflitante(null); navigate({ to: '/checkout/carrinho' }); }} className="w-full rounded-full border border-slate-200 px-5 py-3 font-black text-slate-700">
+                Finalizar carrinho atual
+              </button>
+              <button type="button" onClick={() => setProdutoConflitante(null)} className="w-full px-5 py-2 text-sm font-bold text-slate-500">Continuar escolhendo</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -13,6 +13,7 @@ type ProductFormState = {
   imagem: string;
   ativo: boolean;
   destaque: boolean;
+  antecedenciaHoras: string;
 };
 
 const emptyProductForm: ProductFormState = {
@@ -23,6 +24,7 @@ const emptyProductForm: ProductFormState = {
   imagem: '',
   ativo: true,
   destaque: false,
+  antecedenciaHoras: '0',
 };
 
 export function AdminProductsPage() {
@@ -80,6 +82,7 @@ export function AdminProductsPage() {
         'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=900&q=80',
       destaque: form.destaque,
       disponivel: form.ativo,
+      antecedencia_minutos: Math.round(Number(form.antecedenciaHoras || 0) * 60),
     };
 
     if (editingProductId) {
@@ -109,6 +112,7 @@ export function AdminProductsPage() {
         imagem: data.imagem ?? '',
         destaque: Boolean(data.destaque),
         disponivel: Boolean(data.disponivel),
+        antecedenciaMinutos: Number(data.antecedencia_minutos ?? 0),
       };
 
       setProdutos((current) =>
@@ -140,6 +144,7 @@ export function AdminProductsPage() {
         imagem: data.imagem ?? '',
         destaque: Boolean(data.destaque),
         disponivel: Boolean(data.disponivel),
+        antecedenciaMinutos: Number(data.antecedencia_minutos ?? 0),
       };
 
       setProdutos((current) => [criado, ...current]);
@@ -158,6 +163,7 @@ export function AdminProductsPage() {
       imagem: product.imagem,
       ativo: product.disponivel,
       destaque: product.destaque,
+      antecedenciaHoras: String(product.antecedenciaMinutos / 60),
     });
     setIsModalOpen(true);
   }
@@ -230,6 +236,11 @@ export function AdminProductsPage() {
                       {product.destaque ? (
                         <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-black text-brand-700">
                           Destaque
+                        </span>
+                      ) : null}
+                      {product.antecedenciaMinutos > 0 ? (
+                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700">
+                          Agendado · {product.antecedenciaMinutos / 60}h de antecedência
                         </span>
                       ) : null}
                     </div>
@@ -346,6 +357,18 @@ export function AdminProductsPage() {
                   onChange={(e) => setForm({ ...form, imagem: e.target.value })}
                   className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"
                 />
+              </label>
+              <label className="block text-sm font-bold text-slate-700">
+                Antecedência mínima (horas)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={form.antecedenciaHoras}
+                  onChange={(e) => setForm({ ...form, antecedenciaHoras: e.target.value })}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-brand-500"
+                />
+                <span className="mt-2 block text-xs font-normal text-slate-500">Use 0 para entrega normal. Exemplo: 24 para Kit Festa.</span>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
