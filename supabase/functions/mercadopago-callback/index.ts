@@ -36,10 +36,16 @@ Deno.serve(async (req) => {
     const expiraEm = token.expires_in
       ? new Date(Date.now() + Number(token.expires_in) * 1000).toISOString()
       : null;
+    const profileResponse = await fetch('https://api.mercadolibre.com/users/me', {
+      headers: { Authorization: `Bearer ${token.access_token}` },
+    });
+    const profile = profileResponse.ok ? await profileResponse.json() : {};
     const { error } = await admin.from('integracoes_pagamento').upsert({
       empresa_id: oauthState.empresa_id,
       provedor: 'mercado_pago',
       conta_externa_id: String(token.user_id),
+      conta_nome: profile.nickname ?? null,
+      conta_email: profile.email ?? null,
       token_acesso: token.access_token,
       token_atualizacao: token.refresh_token ?? null,
       token_expira_em: expiraEm,
