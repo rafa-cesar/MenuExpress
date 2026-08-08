@@ -20,13 +20,25 @@ async function validSignature(req: Request, paymentId: string): Promise<boolean>
   return difference === 0;
 }
 
+function validWebhookToken(url: URL): boolean {
+  const expected = requiredEnv('MP_WEBHOOK_SECRET');
+  const provided = url.searchParams.get('hook_token') ?? '';
+  if (expected.length !== provided.length) return false;
+  let difference = 0;
+  for (let i = 0; i < expected.length; i += 1) {
+    difference |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
 Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const empresaId = url.searchParams.get('empresa_id');
     const payload = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
     const paymentId = String(payload?.data?.id ?? url.searchParams.get('data.id') ?? '');
-    if (!empresaId || !paymentId || !(await validSignature(req, paymentId))) {
+    const authenticated = validWebhookToken(url) || await validSignature(req, paymentId);
+    if (!empresaId || !paymentId || !authenticated) {
       return new Response('invalid', { status: 401 });
     }
 
