@@ -1,12 +1,14 @@
 import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { buildTenantMenuPath } from '../services/tenantRoutes';
 
 const STANDALONE_ROUTES = ['/', '/assinar', '/login', '/cadastro', '/cardapio'];
 
 export function PublicLayout() {
   const { pathname } = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const rememberedSlug = sessionStorage.getItem('menuexpress_tenant_slug');
 
   useEffect(() => {
     async function checkAdmin() {
@@ -45,7 +47,7 @@ export function PublicLayout() {
             <span className="text-slate-950">Menu</span><span className="text-brand-600">Express</span>
           </Link>
           <div className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <Link to="/cardapio" className="hover:text-brand-600">Cardápio</Link>
+            <a href={rememberedSlug ? buildTenantMenuPath(rememberedSlug) : '/cardapio'} className="hover:text-brand-600">Cardápio</a>
             {isAdmin && (
               <Link to="/admin" className="rounded-full border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand-600 hover:text-brand-600">
                 ← Admin

@@ -6,6 +6,7 @@ import { useBrand } from '../hooks/useBrand';
 import { clienteService } from '../services/clienteService';
 import { paymentService } from '../services/paymentService';
 import type { Pedido, PedidoStatus } from '../types/domain';
+import { buildTenantMenuPath } from '../services/tenantRoutes';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -115,6 +116,7 @@ export function MinhaAreaPage() {
         total: Number(r.total),
         estimativaMinutos: r.estimativa_minutos as number | undefined,
         previsaoEm: r.previsao_em as string | undefined,
+        agendadoPara: r.agendado_para as string | undefined,
         criadoEm: r.criado_em as string,
         atualizadoEm: r.atualizado_em as string,
       }));
@@ -185,7 +187,7 @@ export function MinhaAreaPage() {
           <button onClick={logout} className="text-xs text-slate-400 hover:text-red-500 font-bold">Sair</button>
         </div>
 
-        <button onClick={() => navigate({ to: '/cardapio' })} className="mb-6 w-full rounded-full py-3.5 font-black text-white" style={btnStyle}>
+        <button onClick={() => window.location.assign(empresa?.slug ? buildTenantMenuPath(empresa.slug) : '/cardapio')} className="mb-6 w-full rounded-full py-3.5 font-black text-white" style={btnStyle}>
           🛒 Fazer novo pedido
         </button>
 
@@ -227,6 +229,9 @@ export function MinhaAreaPage() {
                   ) : <StatusTracker pedido={pedido} />}
                   {pedido.estimativaMinutos && (
                     <p className="mt-3 text-xs font-bold text-emerald-600">⏱ Previsão: ~{pedido.estimativaMinutos} min</p>
+                  )}
+                  {pedido.agendadoPara && (
+                    <p className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-sm font-black text-violet-700">Agendado para {new Date(pedido.agendadoPara).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</p>
                   )}
                   <div className="mt-3 border-t border-slate-100 pt-3 flex justify-between text-sm">
                     <span className="text-slate-500">{pedido.modalidade === 'entrega' ? '🚚 Entrega' : '🏠 Retirada'}</span>

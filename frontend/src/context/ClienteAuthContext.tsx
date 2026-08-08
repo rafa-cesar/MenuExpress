@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { clienteService } from '../services/clienteService';
 import type { ClientePerfil } from '../types/domain';
+import { useMenuStore } from './MenuStoreContext';
 
 interface ClienteAuthContextValue {
   user: User | null;
@@ -21,6 +22,7 @@ interface ClienteAuthContextValue {
 const ClienteAuthContext = createContext<ClienteAuthContextValue | undefined>(undefined);
 
 export function ClienteAuthProvider({ children }: { children: ReactNode }) {
+  const { empresa } = useMenuStore();
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [perfil, setPerfil] = useState<ClientePerfil | null>(null);
@@ -40,13 +42,13 @@ export function ClienteAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!user) { setPerfil(null); setLoading(false); return; }
+    if (!user || !empresa?.id) { setPerfil(null); setLoading(false); return; }
     setLoading(true);
-    clienteService.buscarPorAuthId(user.id).then(p => {
+    clienteService.buscarPorAuthId(user.id, empresa.id).then(p => {
       setPerfil(p);
       setLoading(false);
     });
-  }, [user]);
+  }, [user, empresa?.id]);
 
   const loginComGoogle = async () => {
     setAuthError(null);

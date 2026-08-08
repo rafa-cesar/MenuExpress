@@ -9,6 +9,7 @@ import { buildWhatsAppOrderUrl } from '../services';
 import type { FormaPagamento, Pedido } from '../types/domain';
 import { getDeliveryFee, getDeliveryMinimum } from '../services/delivery';
 import { paymentService } from '../services/paymentService';
+import { buildTenantMenuPath } from '../services/tenantRoutes';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -48,6 +49,7 @@ export function CheckoutPage() {
     return local.toISOString().slice(0, 16);
   };
   const [agendadoPara, setAgendadoPara] = useState('');
+  const [pagamentoOnlineConectado, setPagamentoOnlineConectado] = useState(false);
   const [clienteEnd, setClienteEnd] = useState(
     perfil?.endereco ? `${perfil.endereco.rua}, ${perfil.endereco.numero} — ${perfil.endereco.bairro}` : ''
   );
@@ -59,11 +61,18 @@ export function CheckoutPage() {
   const total = subtotal + taxa;
   const pagamentos = empresa?.pagamentos;
   const paymentOptions = useMemo(() => PAGAMENTOS.filter((option) => {
-    if (option.value === 'online') return pagamentos?.onlineAntecipadoAtivo ?? false;
+    if (option.value === 'online') return Boolean(pagamentos?.onlineAntecipadoAtivo && pagamentoOnlineConectado);
     if (option.value === 'dinheiro') return pagamentos?.dinheiroNaHoraAtivo ?? true;
     if (option.value === 'pix') return pagamentos?.pixNaHoraAtivo ?? false;
     return pagamentos?.cartaoNaHoraAtivo ?? true;
-  }), [pagamentos]);
+  }), [pagamentos, pagamentoOnlineConectado]);
+
+  useEffect(() => {
+    if (!empresa?.id) return;
+    paymentService.disponivel(empresa.id)
+      .then(setPagamentoOnlineConectado)
+      .catch(() => setPagamentoOnlineConectado(false));
+  }, [empresa?.id]);
 
   useEffect(() => {
     if (paymentOptions.length > 0 && !paymentOptions.some((option) => option.value === formaPagamento)) {
@@ -152,7 +161,7 @@ export function CheckoutPage() {
                 Confirmar / Acompanhar pelo WhatsApp
               </a>
             )}
-            <button onClick={() => { clear(); navigate({ to: '/cardapio' }); }} className="w-full rounded-full border border-slate-200 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">
+            <button onClick={() => { clear(); window.location.assign(empresa?.slug ? buildTenantMenuPath(empresa.slug) : '/cardapio'); }} className="w-full rounded-full border border-slate-200 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">
               Fazer novo pedido
             </button>
           </div>

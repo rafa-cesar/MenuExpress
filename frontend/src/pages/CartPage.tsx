@@ -3,6 +3,7 @@ import { useCart } from '../context/CartContext';
 import { useMenuStore } from '../context/MenuStoreContext';
 import { useBrand } from '../hooks/useBrand';
 import { getDeliveryFee, getDeliveryMinimum } from '../services/delivery';
+import { buildTenantMenuPath } from '../services/tenantRoutes';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -19,6 +20,7 @@ export function CartPage() {
   const total = subtotal + taxa;
   const abaixoDoMinimo = modalidade === 'entrega' && subtotal < minimoEntrega;
   const ambasAtivas = Boolean(cfg?.retiradaAtiva && cfg?.entregaAtiva);
+  const voltarAoCardapio = () => window.location.assign(empresa?.slug ? buildTenantMenuPath(empresa.slug) : '/cardapio');
 
   if (items.length === 0) {
     return (
@@ -27,7 +29,7 @@ export function CartPage() {
           <div className="text-6xl">🛒</div>
           <h1 className="mt-4 text-2xl font-black text-slate-900">Carrinho vazio</h1>
           <p className="mt-2 text-slate-500">Adicione produtos para continuar.</p>
-          <button onClick={() => navigate({ to: '/cardapio' })} className="mt-6 rounded-full px-8 py-3 font-black text-white" style={btnStyle}>
+          <button onClick={voltarAoCardapio} className="mt-6 rounded-full px-8 py-3 font-black text-white" style={btnStyle}>
             Ver cardápio
           </button>
         </div>
@@ -40,7 +42,7 @@ export function CartPage() {
       <div className="mx-auto max-w-lg px-4 py-8">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
-          <button onClick={() => navigate({ to: '/cardapio' })} className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm text-slate-600 hover:bg-slate-100">
+          <button onClick={voltarAoCardapio} className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm text-slate-600 hover:bg-slate-100">
             ←
           </button>
           <div>

@@ -165,7 +165,7 @@ export function ClienteAuthPage() {
                 </button>
               </form>
               <a
-                href="/admin/esqueci-senha?next=%2Fcheckout%2Fauth"
+                href="/cliente/esqueci-senha?next=%2Fcheckout%2Fauth"
                 className="mt-4 block w-full text-center text-xs font-bold text-slate-400 underline hover:text-slate-600"
               >
                 Esqueci minha senha
