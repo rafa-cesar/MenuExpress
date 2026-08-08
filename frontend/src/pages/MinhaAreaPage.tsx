@@ -4,6 +4,7 @@ import { useClienteAuth } from '../context/ClienteAuthContext';
 import { useMenuStore } from '../context/MenuStoreContext';
 import { useBrand } from '../hooks/useBrand';
 import { clienteService } from '../services/clienteService';
+import { paymentService } from '../services/paymentService';
 import type { Pedido, PedidoStatus } from '../types/domain';
 
 const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -65,10 +66,28 @@ export function MinhaAreaPage() {
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
+  const [agora, setAgora] = useState(Date.now());
+  const [tentandoPagamento, setTentandoPagamento] = useState<string>();
   const pedidosAtivos = useMemo(
     () => pedidos.filter((pedido) => !['finalizado', 'cancelado'].includes(pedido.status)),
     [pedidos],
   );
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  async function tentarPagamento(pedidoId: string) {
+    setTentandoPagamento(pedidoId);
+    try {
+      const url = await paymentService.iniciarCheckout(pedidoId);
+      window.location.assign(url);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível abrir o pagamento.');
+      setTentandoPagamento(undefined);
+    }
+  }
 
   useEffect(() => {
     if (!user || !perfil) { setLoading(false); return; }
@@ -84,6 +103,7 @@ export function MinhaAreaPage() {
         statusPagamento: r.status_pagamento as Pedido['statusPagamento'],
         provedorPagamento: r.provedor_pagamento as string | undefined,
         pagamentoUrl: r.pagamento_url as string | undefined,
+        pagamentoExpiraEm: r.pagamento_expira_em as string | undefined,
         pagoEm: r.pago_em as string | undefined,
         clienteNome: r.cliente_nome as string | undefined,
         clienteTel: r.cliente_tel as string | undefined,
@@ -112,6 +132,7 @@ export function MinhaAreaPage() {
             ...existing,
             status: row.status as PedidoStatus,
             statusPagamento: row.status_pagamento as Pedido['statusPagamento'],
+            pagamentoExpiraEm: row.pagamento_expira_em as string | undefined,
             estimativaMinutos: row.estimativa_minutos as number | undefined,
           } : existing
         ));
@@ -192,10 +213,15 @@ export function MinhaAreaPage() {
                     <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3">
                       <p className="text-sm font-black text-amber-800">Pagamento ainda não confirmado</p>
                       <p className="mt-1 text-xs text-amber-700">O restaurante só receberá o pedido para preparo depois da confirmação.</p>
-                      {pedido.pagamentoUrl && (
-                        <a href={pedido.pagamentoUrl} className="mt-3 inline-flex rounded-xl bg-amber-600 px-4 py-2 text-xs font-black text-white">
-                          Continuar pagamento
-                        </a>
+                      {pedido.pagamentoExpiraEm && (
+                        <p className="mt-2 text-sm font-black text-amber-900">
+                          Tempo restante: {Math.max(0, Math.floor((new Date(pedido.pagamentoExpiraEm).getTime() - agora) / 60_000))}:{String(Math.max(0, Math.floor((new Date(pedido.pagamentoExpiraEm).getTime() - agora) / 1000) % 60)).padStart(2, '0')}
+                        </p>
+                      )}
+                      {(!pedido.pagamentoExpiraEm || new Date(pedido.pagamentoExpiraEm).getTime() > agora) && (
+                        <button type="button" onClick={() => tentarPagamento(pedido.id)} disabled={tentandoPagamento === pedido.id} className="mt-3 inline-flex rounded-xl bg-amber-600 px-4 py-2 text-xs font-black text-white disabled:opacity-60">
+                          {tentandoPagamento === pedido.id ? 'Abrindo…' : 'Continuar pagamento'}
+                        </button>
                       )}
                     </div>
                   ) : <StatusTracker pedido={pedido} />}
@@ -223,6 +249,15 @@ export function MinhaAreaPage() {
                     <p className="font-black text-slate-800">Pedido #{String(pedido.numero).padStart(4, '0')}</p>
                     <p className="text-xs text-slate-400">{new Date(pedido.criadoEm).toLocaleDateString('pt-BR')}</p>
                     <p className="text-xs text-slate-500 mt-1">{pedido.itens.length} item(ns)</p>
+                    {pedido.statusPagamento === 'expirado' && (
+                      <p className="mt-1 text-xs font-bold text-red-600">Pagamento não realizado no prazo de 15 minutos.</p>
+                    )}
+                    {pedido.statusPagamento === 'estornado' && (
+                      <p className="mt-1 text-xs font-bold text-emerald-600">Pagamento devolvido automaticamente.</p>
+                    )}
+                    {pedido.statusPagamento === 'estorno_pendente' && (
+                      <p className="mt-1 text-xs font-bold text-amber-700">Devolução em processamento.</p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="font-black text-slate-900">{fmt.format(pedido.total)}</p>

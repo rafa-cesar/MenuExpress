@@ -11,7 +11,7 @@ export type DiaSemanaKey = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom'
 export type EstiloVisual = 'moderno' | 'clean' | 'vibrante' | 'classico';
 export type ModalidadeEntrega = 'retirada' | 'entrega';
 export type FormaPagamento = 'online' | 'dinheiro' | 'pix' | 'cartao_credito' | 'cartao_debito';
-export type StatusPagamento = 'nao_aplicavel' | 'aguardando' | 'pago' | 'falhou' | 'cancelado' | 'estornado';
+export type StatusPagamento = 'nao_aplicavel' | 'aguardando' | 'pago' | 'falhou' | 'cancelado' | 'expirado' | 'estorno_pendente' | 'estornado';
 
 export interface HorarioDia {
   ativo: boolean;
@@ -123,6 +123,7 @@ export interface Pedido {
   statusPagamento?: StatusPagamento;
   provedorPagamento?: string;
   pagamentoUrl?: string;
+  pagamentoExpiraEm?: string;
   pagoEm?: string;
   clienteNome?: string;
   clienteTel?: string;
